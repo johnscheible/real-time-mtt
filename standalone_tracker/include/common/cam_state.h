@@ -7,6 +7,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 
+#define WH_RATIO	2.3
+
 namespace people {
 	class CamState;
 	typedef boost::shared_ptr<CamState> CamStatePtr;
@@ -153,7 +155,7 @@ namespace people {
 			// height in image
 			rt.height = f_ / loc.at<float>(1, 0) * state->getY();
 			///////////////////////////////////////////////////////////////////
-			rt.width = rt.height / 2;
+			rt.width = rt.height / WH_RATIO;
 			rt.x = feetx - rt.width / 2;
 			rt.y = feety - rt.height;
 			///////////////////////////////////////////////////////////////////

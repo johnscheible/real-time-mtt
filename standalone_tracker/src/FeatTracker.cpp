@@ -18,7 +18,7 @@ FeatTracker::FeatTracker()
 
 	max_features_ = 300;
 	max_flow_dist_ = 50;
-	show_image_ = true;
+	show_image_ = false;
 }
 
 FeatTracker::~FeatTracker()

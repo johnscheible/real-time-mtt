@@ -259,7 +259,7 @@ int Camera::findIdx(double ts)
 TargetManager::TargetManager()
 {
 	max_dist_ = 0.3;
-	min_overlap_ = 0.3;
+	min_overlap_ = 0.4;
 }
 
 TargetManager::TargetManager(const TargetManager &src)
@@ -642,17 +642,20 @@ std::vector<int> TargetManager::getTerminatingTargets(double threshold, cv::Size
 						}
 					}
 					else {
-						cv::Rect ir = r1 & r2;
-						float covered = (float)(ir.width * ir.height) / (r1.width * r1.height);
-						if(covered > 0.9) {
-							targets_[i]->setStatus(TargetTerminated);
-							remove_idx.push_back(current_target_idx[i]);
-							break;
-						}
-						covered = (float)(ir.width * ir.height) / (r2.width * r2.height);
-						if(covered > 0.9) {
-							targets_[j]->setStatus(TargetTerminated);
-							remove_idx.push_back(current_target_idx[j]);
+						float dist  = abs((r1.x + r1.width / 2) - (r2.x + r2.width / 2));
+						if((dist < r1.width / 4) || (dist < r2.width / 4)){
+							cv::Rect ir = r1 & r2;
+							float covered = (float)(ir.width * ir.height) / (r1.width * r1.height);
+							if(covered > 0.9) {
+								targets_[i]->setStatus(TargetTerminated);
+								remove_idx.push_back(current_target_idx[i]);
+								break;
+							}
+							covered = (float)(ir.width * ir.height) / (r2.width * r2.height);
+							if(covered > 0.9) {
+								targets_[j]->setStatus(TargetTerminated);
+								remove_idx.push_back(current_target_idx[j]);
+							}
 						}
 					}
 				}

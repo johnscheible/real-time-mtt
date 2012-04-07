@@ -278,14 +278,22 @@ namespace people {
 			// iterate over all observation nodes_
 			std::vector<ObservationNode*>::iterator it;
 			for(it = nodes_.begin(); it < nodes_.end(); it++)
+#if 1
+				ret += (*it)->getConfidence(rt);
+#else
 				ret += soft_max((*it)->getConfidence(rt), 4.0f);
+#endif
 		}
 		else {
 			std::vector<ObservationNode*>::iterator it;
 			for(it = nodes_.begin(); it < nodes_.end(); it++)
 			{
 				if((*it)->getType() == type)
+#if 1
+					ret += (*it)->getConfidence(rt);
+#else
 					ret += soft_max((*it)->getConfidence(rt), 4.0f);
+#endif
 			}
 		}
 		ret *= total_weight_;

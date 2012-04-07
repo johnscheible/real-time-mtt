@@ -627,6 +627,7 @@ void PriorDistInteract::setParameters(const std::string &name, const std::string
 	else if (name == "GroupSlopeSigmoid") group_slope_sigmoid_ = boost::lexical_cast<double>(value);
 	else if (name == "GroupThresholdSigmoid") group_threshold_sigmoid_ = boost::lexical_cast<double>(value);
 	else if (name == "InteractionTransitionProb") interaction_transition_prob_ = boost::lexical_cast<double>(value);
+	else if (name == "InteractionOn") interaction_on_ = boost::lexical_cast<bool>(value);
 	else PriorDist::setParameters(name, value);
 }
 
@@ -833,8 +834,15 @@ double PriorDistInteract::computeLogMotionPrior(const SampleInfo &info, MCMCSamp
 	}
 
 	ret = log(num) - log(denom);
-	// interactions
-	ret += computeInteractionPotential(info, sample);
+#if 1
+	if(interaction_on_) {
+#else
+	if(interaction_on_ && 
+		(info.type_ == MoveUpdate || info.type_ == MoveInteractionFlip)) :
+#endif
+		// interactions
+		ret += computeInteractionPotential(info, sample);
+	}
 #if 0
 	if(fabs(ret) < 1e-5) {
 		if(prev_dist_->getNumTargets() > info.idx_) {
@@ -987,26 +995,38 @@ double PriorDistInteract::computePairwiseInteractionPotential(PeopleStatePtr sta
 #ifdef VEL_STATE
 	my_assert(state1.get() && state2.get());
 	double dist = state_ground_dist(state1, state2);
-
+	
 	if(isgroup) { 
 #if 1
-		group_slope_sigmoid_ = 3.0f;
-		group_threshold_sigmoid_ = 1.0f;
-
+		// group_slope_sigmoid_ = 3.0f;
+		// group_threshold_sigmoid_ = 1.0f;
 		// double reward = log(8.0);
-		group_const_ = 12.;
+		// group_const_ = 12.;
 		double diff_vel = state_ground_vel_diff(state1, state2);
 		double dist_sig = -log(1 + exp(group_slope_sigmoid_ * (dist - group_threshold_sigmoid_)));
-		double attraction = - group_const_ * (diff_vel - 1);
-
+		double attraction = - group_const_ * (diff_vel - 0.5);
+		
+		// std::cout << "interaction group potential : " << std::endl;
+		// state1->print();
+		// state2->print();
+		// std::cout << dist_sig << " : " << attraction << std::endl;
 		return dist_sig + attraction; // should there be a reward??
 #else
 		return 1 / ( 1 + exp(group_slope_sigmoid_ * (dist - group_threshold_sigmoid_))) 
 					* exp(- group_const_ * diff_vel ); // should be added
 #endif
 	}
-	else
+	else {
+#if 0
+		if(dist < .6) {
+			std::cout << "interaction repulsion potential : " << std::endl;
+			state1->print();
+			state2->print();
+			std::cout << -1 / ( repulsion_const_ * dist ) << std::endl;
+		}
+#endif
 		return -1 / ( repulsion_const_ * dist ); // new sample
+	}
 #else
 		// clean up the code..
 		assert(0);
@@ -1017,7 +1037,7 @@ double PriorDistInteract::computePairwiseInteractionPotential(PeopleStatePtr sta
 double PriorDistInteract::computeInteractionPotential(const SampleInfo &info, MCMCSamplePtr sample)
 {
 	int min_idx, max_idx;
-
+	assert(interaction_on_);
 	double ret = 0;
 	PeopleStatePtr state1, state2;
 	my_assert(repulsion_const_ > 0.1);
@@ -1194,7 +1214,12 @@ double PriorDistCameraEstimate::computeLogMotionPrior(const SampleInfo &info, MC
 	// TODO : uncomment below to use interaction potential
 	///////////////////////////////////////////////////////
 	// compute the difference of all affected pairwist potentials
-	if(info.type_ == MoveUpdate || info.type_ == MoveInteractionFlip) {
+#if 1
+	if(interaction_on_) {
+#else
+	if(interaction_on_ && 
+		(info.type_ == MoveUpdate || info.type_ == MoveInteractionFlip)) {
+#endif
 		ret += computeInteractionPotential(info, sample);
 	}
 #if 0 // def HEIGHT_PRIOR

@@ -290,6 +290,7 @@ namespace people {
 			case MoveDelete:
 			case MoveStay:
 			case MoveLeave:
+				// ret = soft_max((double)(new_people_cache_[info.idx_] - people_cache_[info.idx_]), 2.0);
 				ret = (double)(new_people_cache_[info.idx_] - people_cache_[info.idx_]);
 				break;
 			case MoveUpdate:
@@ -542,6 +543,13 @@ namespace people {
 
 		int		max_gfeats_;
 		bool	estimate_camera_;
+		bool	interaction_on_;
+		///////////////////////////////////////////
+		// interaction parameters
+		double 	repulsion_const_;
+		double 	group_const_;
+		double 	group_slope_;
+		double 	group_threshold_;
 		/*-------------------------
 		-- Debug related functions
 		---------------------------*/

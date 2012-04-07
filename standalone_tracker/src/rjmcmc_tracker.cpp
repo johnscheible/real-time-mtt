@@ -19,6 +19,16 @@ void RJMCMCTracker::setParameters(const std::string &name, const std::string &va
 	///////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////
+	// target interaction
+	else if (name == "RepulsionConstant")
+		repulsion_const_ = boost::lexical_cast<double>(value);
+	else if (name == "GroupConstant")
+		group_const_ = boost::lexical_cast<double>(value);
+	else if (name == "GroupSlopeSigmoid")
+		group_slope_ =  boost::lexical_cast<double>(value);
+	else if (name == "GroupThresholdSigmoid")
+		group_threshold_ = boost::lexical_cast<double>(value);
+	///////////////////////////////////////////////////////
 	// target motion
 	else if (name == "MotionSigmaX")
 		motion_sigma_x_ = boost::lexical_cast<double>(value);
@@ -113,6 +123,8 @@ void RJMCMCTracker::setParameters(const std::string &name, const std::string &va
 		max_gfeats_ = boost::lexical_cast<int>(value);
 	else if (name == "EstimateCamera")
 		estimate_camera_ = boost::lexical_cast<bool>(value);
+	else if (name == "InteractionOn")
+		interaction_on_ = boost::lexical_cast<bool>(value);
 	else if (name == "DetectionSigmaX")
 		detection_sigma_x_ = boost::lexical_cast<double>(value);
 	else if (name == "DetectionSigmaY")
@@ -316,7 +328,10 @@ void RJMCMCTracker::setDefaultParameters()
 	perturb_vz_ = 1.5;
 #endif
 	/////////////////////////////////////////
-
+	repulsion_const_ = 2.0;
+	group_const_ = 10.0;
+	group_slope_ = 3.0; 
+	group_threshold_ = 1.0;
 	/////////////////////////////////////////
 	motion_cam_sigma_x_ = 0.9;
 	motion_cam_sigma_z_ = 0.9;
@@ -336,6 +351,7 @@ void RJMCMCTracker::setDefaultParameters()
 	perturb_feat_z_ = 0.01;
 	/////////////////////////////////////////
 	estimate_camera_ = true;
+	interaction_on_ = true;
 }
 
 // #define SAVE_ALL_SAMPLES
@@ -518,6 +534,224 @@ CamStatePtr RJMCMCTracker::initializeCamera()
 		cur_cam->setHorizon(mean_hor);
 	}
 	// find yaw/x/z/vx by few sampling - hold features, targets fixed
+#if 0
+	double lkhood = 0;
+	MCMCSamplePtr				one_sample = boost::make_shared<MCMCSample>(MCMCSample());
+
+	RJMCMCProposal 				prop_dist(prev_dist_, timesec);
+	PriorDistCameraEstimate		motion_prior(prev_dist_, timesec);
+
+	MeanShiftWrapper			ms_wrapper;
+	ms_wrapper.setData(ms_rts_, ms_sims_);
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	motion_prior.setParameters("MotionSigmaX", boost::lexical_cast<std::string>(motion_sigma_x_));
+	motion_prior.setParameters("MotionSigmaY", boost::lexical_cast<std::string>(motion_sigma_y_));
+	motion_prior.setParameters("MotionSigmaZ", boost::lexical_cast<std::string>(motion_sigma_z_));
+#ifdef VEL_STATE
+	motion_prior.setParameters("MotionSigmaVX", boost::lexical_cast<std::string>(motion_sigma_vx_));
+	motion_prior.setParameters("MotionSigmaVZ", boost::lexical_cast<std::string>(motion_sigma_vz_));
+#endif
+	motion_prior.setParameters("ProbEnter", boost::lexical_cast<std::string>(prob_enter_));
+	motion_prior.setParameters("ProbStay", boost::lexical_cast<std::string>(prob_stay_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	motion_prior.setParameters("CameraMotionSigmaX", boost::lexical_cast<std::string>(motion_cam_sigma_x_));
+	motion_prior.setParameters("CameraMotionSigmaZ", boost::lexical_cast<std::string>(motion_cam_sigma_z_));
+	motion_prior.setParameters("CameraMotionSigmaYaw", boost::lexical_cast<std::string>(motion_cam_sigma_yaw_));
+	motion_prior.setParameters("CameraMotionSigmaV", boost::lexical_cast<std::string>(motion_cam_sigma_v_));
+	motion_prior.setParameters("CameraMotionSigmaHorizon", boost::lexical_cast<std::string>(motion_cam_sigma_horizon_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	motion_prior.setParameters("ProbFeatEnter", boost::lexical_cast<std::string>(prob_feat_enter_));
+	motion_prior.setParameters("ProbFeatStay", boost::lexical_cast<std::string>(prob_feat_stay_));
+	motion_prior.setParameters("InteractionOn", boost::lexical_cast<std::string>(interaction_on_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	prop_dist.setParameters("ProbMoveAdd", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveDelete", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveStay", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveLeave", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveUpdate", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveInteractionFlip", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveFeatStay", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveFeatLeave", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveFeatUpdate", boost::lexical_cast<std::string>(0.0));
+	prop_dist.setParameters("ProbMoveCamUpdate", boost::lexical_cast<std::string>(1.0));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	prop_dist.setParameters("DetectionSigmaX", boost::lexical_cast<std::string>(detection_sigma_x_));
+	prop_dist.setParameters("DetectionSigmaY", boost::lexical_cast<std::string>(detection_sigma_y_));
+	prop_dist.setParameters("DetectionSigmaH", boost::lexical_cast<std::string>(detection_sigma_h_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	prop_dist.setParameters("PerturbCamSigmaX", boost::lexical_cast<std::string>(perturb_cam_x_));
+	prop_dist.setParameters("PerturbCamSigmaZ", boost::lexical_cast<std::string>(perturb_cam_z_));
+	prop_dist.setParameters("PerturbCamSigmaYaw", boost::lexical_cast<std::string>(perturb_cam_yaw_));
+	prop_dist.setParameters("PerturbCamSigmaV", boost::lexical_cast<std::string>(perturb_cam_v_));
+	prop_dist.setParameters("PerturbCamSigmaHorizon", boost::lexical_cast<std::string>(perturb_cam_horizon_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	prop_dist.setParameters("PerturbFeatSigmaX", boost::lexical_cast<std::string>(perturb_feat_x_));
+	prop_dist.setParameters("PerturbFeatSigmaZ", boost::lexical_cast<std::string>(perturb_feat_z_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	prop_dist.setParameters("PerturbSigmaX", boost::lexical_cast<std::string>(perturb_x_));
+	prop_dist.setParameters("PerturbSigmaY", boost::lexical_cast<std::string>(perturb_y_));
+	prop_dist.setParameters("PerturbSigmaZ", boost::lexical_cast<std::string>(perturb_z_));
+#ifdef VEL_STATE
+	prop_dist.setParameters("PerturbSigmaVX", boost::lexical_cast<std::string>(perturb_vx_));
+	prop_dist.setParameters("PerturbSigmaVZ", boost::lexical_cast<std::string>(perturb_vz_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	prop_dist.setParameters("MotionSigmaX", boost::lexical_cast<std::string>(motion_sigma_x_));
+	prop_dist.setParameters("MotionSigmaY", boost::lexical_cast<std::string>(motion_sigma_y_));
+	prop_dist.setParameters("MotionSigmaZ", boost::lexical_cast<std::string>(motion_sigma_z_));
+	prop_dist.setParameters("MotionSigmaVX", boost::lexical_cast<std::string>(motion_sigma_vx_));
+	prop_dist.setParameters("MotionSigmaVZ", boost::lexical_cast<std::string>(motion_sigma_vz_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+#endif
+#ifdef VEL_STATE
+	motion_prior.initMotionParameters();
+#endif
+	one_sample->setCamState(cur_cam);
+	//////////////////////////////////////////////////////////////////////
+	// initialize targets
+	//////////////////////////////////////////////////////////////////////
+	std::vector<PeopleStatePtr> states;
+	std::vector<bool> exists;
+	std::vector<TargetDistPtr> targets = prev_dist_->getTargetDists();
+	for(unsigned int i = 0; i < proposals_.size(); i++) {
+		PeopleStatePtr state;
+		if(i < targets.size()) {
+			assert(i < targets.size());
+			state = targets[i]->getMean()->clone();
+#ifdef VEL_STATE
+			state = state->predict(timesec);
+
+			state->setVX(state->getVX() / 2);
+			state->setVY(0.0);
+			state->setVZ(state->getVZ() / 2);
+#endif
+			state->setTS(timesec);
+
+			states.push_back(state);
+			exists.push_back(true);
+		}
+		else {
+			state = boost::make_shared<PeopleState>(PeopleState());
+			states.push_back(state);
+			exists.push_back(false);
+		}
+	}
+	one_sample->setStates(states, exists);
+	//////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////
+	// initialize interaction
+	//////////////////////////////////////////////////////////////////////
+	std::vector< std::vector<bool> > group_interaction;
+	for(unsigned int i = 0; i < proposals_.size(); i++) {
+		std::vector<bool> one_col;
+		for(unsigned int j = 0; j < i; j++) {
+			one_col.push_back(false); // by default no group interaction
+		}
+		group_interaction.push_back(one_col);
+	}
+	one_sample->setInteractionMode(group_interaction);
+	//////////////////////////////////////////////////////////////////////
+	// set initial features
+	//////////////////////////////////////////////////////////////////////
+	std::vector<GFeatStatePtr> feats;
+	std::vector<bool> validities;
+	for(size_t i = 0; i < feat_idx_.size(); i++) {
+		GFeatStatePtr fstate;
+		bool valid = false;
+		if(i < (size_t)prev_dist_->getNumFeats()) {
+			// from previous distribution
+			fstate = prev_dist_->drawFeatSample(i, timesec);
+			if(fstate.get())					valid = true;
+			else								valid = false;
+		}
+		else {
+			// new feature
+			fstate = boost::make_shared<GFeatState>(GFeatState());
+			valid = false;
+		}
+		fstate->setTS(timesec);
+		feats.push_back(fstate);
+		validities.push_back(valid);
+	}
+	one_sample->setGFeatStates(feats, validities);
+	//////////////////////////////////////////////////////////////////////
+
+	// initialize caches..
+	obs_wrapper_.initCache(one_sample);
+	prop_dist.initCache(one_sample);
+	motion_prior.initCache(one_sample);
+	ms_wrapper.initCache(one_sample);
+
+	int counter = 0;
+	int num_samples = 500;
+
+	double maxl = 0;
+	MCMCSamplePtr	max_sample = one_sample;
+	SampleInfo info;
+
+	double 		ar, rval;
+	double 		obs_ar, prior_ar, q_ar, ms_ar;
+
+	int accepted = 0;
+	init_sampling_history();
+	while(++counter < num_samples) {
+		// generate new sample
+		info = prop_dist.drawNewSample(one_sample);
+		if(info.type_ == MoveNone) {
+			// counter--; // not valid sample.. ignore
+			continue;
+		}
+
+		if((info.type_ == MoveCamUpdate) && (prev_dist_->getMeanCamera().get() == NULL)) {
+			continue;
+		}
+		// preprocess caches
+		motion_prior.computeNewSampletMotionPrior(info);
+		obs_wrapper_.computeNewSampleObservationLkhood(info, one_sample);
+		ms_wrapper.computeNewSampleMSLkhood(info, one_sample);
+		// compute observation lkhood
+		obs_ar = obs_wrapper_.computeLogObservationLkhood(info, one_sample);
+		// compute motion prior
+		prior_ar = motion_prior.computeLogMotionPrior(info, one_sample);
+		// compute proposal ratio
+		q_ar = prop_dist.getProposalLogLkhood(one_sample, info);
+		// compute lkhood from MS
+		ms_ar = ms_wrapper.computeLogMSLkhood(info);
+		// evaluate acceptance ratio
+		ar = obs_ar + prior_ar + q_ar + ms_ar;
+
+		// std::cout << obs_ar << ":" << prior_ar << ":" << q_ar << ":" << ms_ar << std::endl;
+
+		rval = rng_.uniform((double)0.0, (double)1.0);
+		if(ar > log(rval)) {
+			// update sample..
+			one_sample = one_sample->setNewSample(info);
+			// update caches..
+			obs_wrapper_.updateCache(info, true);
+			prop_dist.updateCache(info, true);
+			motion_prior.updateCache(info, true);
+			ms_wrapper.updateCache(info, true);
+			// record sampling history
+			record_sampling_history(info, true);
+			accepted++;
+		}
+		else {
+			record_sampling_history(info, false);
+		}
+		
+		lkhood += ar;
+		if(maxl < lkhood) {
+			maxl = lkhood;
+			max_sample = one_sample;
+			// std::cout << "maxlkhood : " <<  maxl;
+			one_sample->getCamState()->print();
+		}
+	}
+	print_sampling_history();
+	// std::cout << "accepted! => " << accepted << std::endl;
+	cur_cam = one_sample->getCamState();
+#endif
 	return cur_cam;
 }
 
@@ -545,6 +779,9 @@ void RJMCMCTracker::runMCMCSampling()
 	if(!estimate_camera_) {
 		prob_move_cam_update_ = prob_move_feat_update_ = prob_move_feat_leave_ = prob_move_feat_stay_ = 0.0;
 	}
+	if(!interaction_on_) {
+		prob_move_interaction_flip_ = 0.0;
+	}
 #ifdef TESTING_CONF
 	if(timesec >= 0.12) {
 		prob_move_stay_ = prob_move_leave_ = 0.0;
@@ -565,6 +802,11 @@ void RJMCMCTracker::runMCMCSampling()
 	motion_prior.setParameters("ProbEnter", boost::lexical_cast<std::string>(prob_enter_));
 	motion_prior.setParameters("ProbStay", boost::lexical_cast<std::string>(prob_stay_));
 	/////////////////////////////////////////////////////////////////////////////////////////////////
+	motion_prior.setParameters("RepulsionConstant", boost::lexical_cast<std::string>(repulsion_const_));
+	motion_prior.setParameters("GroupConstant", boost::lexical_cast<std::string>(group_const_));
+	motion_prior.setParameters("GroupSlopeSigmoid", boost::lexical_cast<std::string>(group_slope_));
+	motion_prior.setParameters("GroupThresholdSigmoid", boost::lexical_cast<std::string>(group_threshold_));
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	motion_prior.setParameters("CameraMotionSigmaX", boost::lexical_cast<std::string>(motion_cam_sigma_x_));
 	motion_prior.setParameters("CameraMotionSigmaZ", boost::lexical_cast<std::string>(motion_cam_sigma_z_));
 	motion_prior.setParameters("CameraMotionSigmaYaw", boost::lexical_cast<std::string>(motion_cam_sigma_yaw_));
@@ -573,6 +815,8 @@ void RJMCMCTracker::runMCMCSampling()
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	motion_prior.setParameters("ProbFeatEnter", boost::lexical_cast<std::string>(prob_feat_enter_));
 	motion_prior.setParameters("ProbFeatStay", boost::lexical_cast<std::string>(prob_feat_stay_));
+
+	motion_prior.setParameters("InteractionOn", boost::lexical_cast<std::string>(interaction_on_));
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////

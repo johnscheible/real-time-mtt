@@ -3,17 +3,6 @@
 # to the root binary directory of the project as ${HELLO_BINARY_DIR}. 
 cmake_minimum_required (VERSION 2.6) 
 project (standalone_tracker) 
-# The version number.
-set (TRACKER_VERSION_MAJOR 0)
-set (TRACKER_VERSION_MINOR 1)
-set (TRACKER_VERSION_MISC  0)
- 
-# configure a header file to pass some of the CMake settings
-# to the source code
-configure_file (
-	"${PROJECT_SOURCE_DIR}/src/TrackerConfig.h.in"
-	"${PROJECT_BINARY_DIR}/include/TrackerConfig.h"
-	)
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -31,7 +20,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVEL_STATE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCAM_EST")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHEIGHT_PRIOR")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHORIZON_EST")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DET_RESPONSE")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DET_RESPONSE")
 add_library(tracker src/assignmentoptimal.cpp src/target_manager.cpp src/rjmcmc_proposal.cpp src/rjmcmc_tracker.cpp src/meanshiftTracker.cpp src/PriorDist.cpp src/util.cpp)
 add_library(observation src/ObservationManager.cpp src/DetectionReadinNode.cpp src/FeatTracker.cpp)
 

@@ -60,7 +60,7 @@ namespace people {
  			pert_cam_sigma_v_ = 0.03;
  			pert_cam_sigma_horizon_ = 0.03;
 
-			prob_interaction_flip_ = 0.5;
+			prob_interaction_flip_ = 0.9;
 			min_frames_group_ = 7;
 		};
 

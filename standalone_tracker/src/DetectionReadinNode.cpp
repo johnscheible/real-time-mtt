@@ -166,20 +166,22 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 		nread = fread(det, sizeof(float), 5, fp);
 		assert(nread == 5);
 #ifdef USE_DET_RESPONSE
-		if(det[4] > 0) {
-			responses_.push_back(det[4]);
+		if(det[4] > 1.0) {
+			responses_.push_back(max((double)det[4], 0.0));
+			// responses_.push_back(det[4] + 0.5);
 #else
 		if(det[4] > .5) {
 #endif
 			cv::Rect rt(det[0], det[1], det[2], det[3]); 
 			
-			rt.width = rt.height / 2;
+			rt.width = rt.height / WH_RATIO;
 			// trick to use nms in opencv
 			found_.push_back(rt);
-			found_.push_back(rt);
+			// found_.push_back(rt);
 		}
 	}
 #ifdef USE_DET_RESPONSE
+#if 0
 	std::vector<cv::Rect> found2 = found_;
 	std::vector<double> resps;
 
@@ -192,17 +194,19 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 				found_[j].width == found2[i].width &&
 				found_[j].height == found2[i].height) {
 				
-				resps.push_back(min( max( responses_[i], 0.0 ), 1.0 ) );
+				resps.push_back(max( responses_[j], 0.0 ) );
 
 				break;
 			}
-
+			assert(j != found_.size() - 1);
 		}
 	}
 	found_ = found2;
 	responses_ = resps;
 
+	std::cout << found_.size() << " " << resps.size() << std::endl; 
 	assert(found_.size() == responses_.size());
+#endif
 #else
 	cv::groupRectangles(found_, 1, 0.2);
 #endif
@@ -260,6 +264,7 @@ double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 {
 	double overlap = 0.0; // detectionOberlap(rt);
 #ifdef USE_DET_RESPONSE
+	// weight_  = 0.5;
 	int idx = 0;
 	overlap = getMinDist2Dets(found_, idx, rt, det_std_x_, det_std_y_, det_std_h_);
 	if(overlap < 4.0) { // within range

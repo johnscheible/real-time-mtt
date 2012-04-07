@@ -86,6 +86,7 @@ namespace people {
 			prev_dist_type_ = "independent"; 
 			repulsion_const_ = 1; 
 			interaction_transition_prob_ = 0.95;
+			interaction_on_ = true;
 		};
 
 		PriorDistInteract(PosteriorDistPtr prior, double timestamp){ 
@@ -94,6 +95,7 @@ namespace people {
 			interaction_transition_prob_ = 0.95;
 			prev_dist_ = prior; 
 			timestamp_ = timestamp; 
+			interaction_on_ = true;
 		};
 
 		virtual ~PriorDistInteract() {};
@@ -127,6 +129,8 @@ namespace people {
 		double group_threshold_sigmoid_;
 
 		double interaction_transition_prob_;
+
+		bool interaction_on_;
 
 		cv::Mat one_interaction_mode_prior_cache_;
 		cv::Mat interaction_mode_cache_;

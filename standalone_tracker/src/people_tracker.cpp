@@ -15,8 +15,6 @@
 // program option
 #include <boost/program_options.hpp>
 
-#include <TrackerConfig.h>
-
 using namespace std;
 using namespace people;
 namespace po = boost::program_options;
@@ -28,7 +26,12 @@ typedef struct _param_set {
 	std::string conf_list_file;
 	std::string	out_dir;
 	std::string	out_vid;
+
 	bool		showimg;
+	bool		cam_estimate;
+	bool		interaction_on;
+
+	double		fps;
 	// observation paramters
 	double 		min_height;
 	double 		max_height;
@@ -59,6 +62,11 @@ typedef struct _param_set {
 	double		motion_std_z;
 	double		motion_std_vx;
 	double		motion_std_vz;
+
+	double		repulsion_const;
+	double		group_const;
+	double 		group_slope;
+	double		group_threshold;
 
 	double		sample_std_x;
 	double		sample_std_y;
@@ -114,6 +122,9 @@ param_set parse_arguments(int ac, char **av)
 		("outdir", po::value<std::string>(), "results directory")
 		("outvid", po::value<std::string>(), "output video")
 		("showimg", po::value<bool>(), "show results")
+		("cam_estimate", po::value<bool>(), "estimate camera motion")
+		("interaction_on", po::value<bool>(), "use interaction model")
+		("fps", po::value<double>(), "FPS (15)")
 		// observation parameters
 		("min_height", po::value<double>(), "minimum height of a person (m) (1.2)")
 		("max_height", po::value<double>(), "maximum height of a person (m) (2.2)")
@@ -147,6 +158,11 @@ param_set parse_arguments(int ac, char **av)
 		("motion_std_z", po::value<double>(), "person motion std in z (0.5 / sec)")
 		("motion_std_vx", po::value<double>(), "person motion std in x velocity (3.0 / sec)")
 		("motion_std_vz", po::value<double>(), "person motion std in z velocity (3.0 / sec)")
+		// interaction parameters
+		("repulsion_const", po::value<double>(), "")
+		("group_const", po::value<double>(), "")
+		("group_slope", po::value<double>(), "")
+		("group_threshold", po::value<double>(), "")
 		// person sample parameters
 		("sample_std_x", po::value<double>(), "person sample std in x (0.2 / sec)")
 		("sample_std_y", po::value<double>(), "person sample std in y (0.04 / sec)")
@@ -190,7 +206,6 @@ param_set parse_arguments(int ac, char **av)
 	po::notify(vm);    
 
 	if (vm.count("help")) {
-		cout << "Multi-target tracker version (" << TRACKER_VERSION_MAJOR << "." << TRACKER_VERSION_MINOR << "." << TRACKER_VERSION_MISC << ")" << std::endl;
 		cout << desc << "\n";
 		exit(1);
 	}
@@ -241,6 +256,23 @@ param_set parse_arguments(int ac, char **av)
 	else {
 		ret.showimg = vm["showimg"].as<bool>();
 	}
+
+	if(!vm.count("cam_estimate"))  {
+		ret.cam_estimate = true;
+	}
+	else {
+		ret.cam_estimate = vm["cam_estimate"].as<bool>();
+	}
+
+	if(!vm.count("interaction_on"))  {
+		ret.interaction_on = false;
+	}
+	else {
+		ret.interaction_on = vm["interaction_on"].as<bool>();
+	}
+
+	if(!vm.count("fps"))  { ret.fps = 15; }
+	else {	ret.fps = vm["fps"].as<double>();	}
 	//////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////
 	// observation parameters
@@ -344,6 +376,19 @@ param_set parse_arguments(int ac, char **av)
 	else {	ret.motion_std_vx = vm["motion_std_vx"].as<double>();	}
 	if(!vm.count("motion_std_vz"))  { ret.motion_std_vz = 3.0; }
 	else {	ret.motion_std_vz = vm["motion_std_vz"].as<double>();	}
+	//////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////
+	// interaction paramters
+	//////////////////////////////////////////////////////////////////
+	if(!vm.count("repulsion_const"))  { ret.repulsion_const = 2.0; }
+	else {	ret.repulsion_const = vm["repulsion_const"].as<double>();	}
+	if(!vm.count("group_const"))  { ret.group_const = 12.0; }
+	else {	ret.group_const = vm["group_const"].as<double>();	}
+	if(!vm.count("group_slope"))  { ret.group_slope = 3.0; }
+	else {	ret.group_slope = vm["group_slope"].as<double>();	}
+	if(!vm.count("group_threshold"))  { ret.group_threshold = 1.0; }
+	else {	ret.group_threshold = vm["group_threshold"].as<double>();	}
 	//////////////////////////////////////////////////////////////////
 
 	//////////////////////////////////////////////////////////////////
@@ -663,7 +708,7 @@ int main (int ac, char** av)
 	cv::VideoWriter video_feature;
 	cv::VideoWriter video_camera;
 
-	double fps = 15;
+	double fps = params.fps;
 	if(params.out_vid != "") {
 		std::string fname = params.out_vid + "_target.avi";
 		if(!video_target.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(640 , 480), true))
@@ -702,6 +747,15 @@ int main (int ac, char** av)
 	tracker.setParameters("MCMCBurnin", boost::lexical_cast<std::string>(params.num_burnin));
 	tracker.setParameters("MCMCThinning", boost::lexical_cast<std::string>(params.num_thinning));
 	tracker.setParameters("MaximumGFeats", boost::lexical_cast<std::string>(params.max_feats));
+
+	tracker.setParameters("InteractionOn", boost::lexical_cast<std::string>(params.interaction_on));
+	
+	tracker.setParameters("RepulsionConstant", boost::lexical_cast<std::string>(params.repulsion_const));
+	tracker.setParameters("GroupConstant", boost::lexical_cast<std::string>(params.group_const));
+	tracker.setParameters("GroupSlopeSigmoid", boost::lexical_cast<std::string>(params.group_slope));
+	tracker.setParameters("GroupThresholdSigmoid", boost::lexical_cast<std::string>(params.group_threshold));
+
+	tracker.setParameters("EstimateCamera", boost::lexical_cast<std::string>(params.cam_estimate));
 
 	tracker.setParameters("ProbMoveAdd", boost::lexical_cast<std::string>(params.prob_move_add));
 	tracker.setParameters("ProbMoveDelete", boost::lexical_cast<std::string>(params.prob_move_delete));
