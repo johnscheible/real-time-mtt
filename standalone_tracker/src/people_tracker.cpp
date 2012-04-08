@@ -31,6 +31,9 @@ typedef struct _param_set {
 	bool		showimg;
 	bool		cam_estimate;
 	bool		interaction_on;
+	
+	int 		iframe;
+	int 		eframe;
 
 	double		fps;
 	// observation paramters
@@ -127,6 +130,8 @@ param_set parse_arguments(int ac, char **av)
 		("cam_estimate", po::value<bool>(), "estimate camera motion")
 		("interaction_on", po::value<bool>(), "use interaction model")
 		("fps", po::value<double>(), "FPS (15)")
+		("iframe", po::value<int>(), "initial frame (0, optional)")
+		("eframe", po::value<int>(), "last frame (inf, optional)")
 		// observation parameters
 		("min_height", po::value<double>(), "minimum height of a person (m) (1.2)")
 		("max_height", po::value<double>(), "maximum height of a person (m) (2.2)")
@@ -282,6 +287,13 @@ param_set parse_arguments(int ac, char **av)
 
 	if(!vm.count("fps"))  { ret.fps = 15; }
 	else {	ret.fps = vm["fps"].as<double>();	}
+
+	if(!vm.count("iframe"))  { ret.iframe = 0; }
+	else {	ret.iframe = vm["iframe"].as<int>();	}
+
+	if(!vm.count("eframe"))  { ret.eframe = 100000; }
+	else {	ret.eframe = vm["eframe"].as<int>();	}
+
 	//////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////
 	// observation parameters
@@ -867,7 +879,7 @@ int main (int ac, char** av)
 	tracker.setInitialCamera(init_cam);
 	// feat_tracker.showImage(true);
 	mgr->setData((void*)&feat_tracker, "feat_tracker");
-	for(size_t i = 0; i < im_files.size(); i++) {
+	for(size_t i = max(0, params.iframe); i < min((int)im_files.size(), params.eframe); i++) {
 		timesec = (double)i / fps;
 		// process one frame!!!
 		std::string fname = params.root_dir + im_files[i];

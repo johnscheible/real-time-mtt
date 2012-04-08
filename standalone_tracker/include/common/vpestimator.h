@@ -27,6 +27,7 @@ namespace people {
 		bool readPreprocessedFile(const std::string &filename);
 	protected:
 		void detectLines() { assert(0); };
+		double getMaxHorizonVote(int idx);
 	protected:
 		double 					weight_;
 		std::vector<longline> 	lines_;

@@ -5,7 +5,7 @@ namespace people {
 
 VPEstimator::VPEstimator()
 {
-	weight_ = 1;
+	weight_ = .1;
 	votestep_ = 15;
 	vmap_ = cv::Mat();
 	lines_.clear();
@@ -106,16 +106,41 @@ bool VPEstimator::readPreprocessedFile(const std::string &filename)
 double VPEstimator::getHorizonConfidence(int hor)
 {
 	double ret = 0;
-
 	if(lines_.size() == 0)
 		return ret;
-
 	int yidx = floor((double)hor / votestep_);
+#if 1
+	double offset = (double)hor - (votestep_ * (double)yidx);
+	// std::cout << hor << " " << yidx << " " << offset << " ";
+	// std::cout << (1.0 - (offset / votestep_)) << " " << (offset / votestep_)  << " ";
+	// std::cout << getMaxHorizonVote(yidx) << " ";
+	// std::cout << getMaxHorizonVote(yidx + 1) <<  " ";
+	// std::cout << std::endl;
+	ret = (1.0 - (offset / votestep_)) * getMaxHorizonVote(yidx);
+	ret += (offset / votestep_) * getMaxHorizonVote(yidx + 1);
+	return ret;
+#else
 	for(int i = 0; i < vmap_.cols; i++) {
 		if(ret < vmap_.at<float>(yidx, i)) {
 			ret = (double)vmap_.at<float>(yidx, i);
 		}
 	}
 	return ret * weight_;
+#endif
 }
+
+double VPEstimator::getMaxHorizonVote(int idx)
+{
+	double ret = 0.0;
+
+	if(idx == vmap_.rows) return 0.0;
+	assert(vmap_.rows > idx);
+	for(int i = 0; i < vmap_.cols; i++) {
+		if(ret < vmap_.at<float>(idx, i)) {
+			ret = (double)vmap_.at<float>(idx, i);
+		}
+	}
+	return ret * weight_;
+}
+
 };

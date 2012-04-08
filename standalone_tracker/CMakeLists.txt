@@ -12,7 +12,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 find_package(OpenCV REQUIRED)
 
 set(Boost_USE_STATIC_LIBS   ON)
-set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_MULTITHREADED OFF)
 find_package(Boost 1.36.0 COMPONENTS program_options REQUIRED)
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")

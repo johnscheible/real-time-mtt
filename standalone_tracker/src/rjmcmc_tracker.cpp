@@ -501,7 +501,7 @@ CamStatePtr RJMCMCTracker::initializeCamera()
 	CamStatePtr prev_cam = prev_dist_->getMeanCamera();
 	double 		timesec = obs_wrapper_.getTimeSec();
 	CamStatePtr cur_cam = prev_cam->predict(timesec);
-	
+#if 0
 	// find horizon by detection votes
 	std::vector<int> votes;
 	std::vector<double> std;
@@ -533,6 +533,29 @@ CamStatePtr RJMCMCTracker::initializeCamera()
 	if(mean_hor != 0) {
 		cur_cam->setHorizon(mean_hor);
 	}
+#else
+	// find initial horizon by vp votes
+	CamStatePtr temp = cur_cam->clone();
+	double max_conf = 0;
+	ObservationManager *mgr = obs_wrapper_.getManager();
+	//cv::Mat timage(50, 2000, CV_8U);
+	//int cnt = 0;
+	for(int i = 0; i < 2000; i += 1) {
+		temp->setHorizon(i);
+		double tval = mgr->getCameraConfidence(temp);
+		if(max_conf < tval) {
+			cur_cam->setHorizon(i);
+			max_conf = tval;
+		}
+		// std::cout << setprecision(6) << "hor : " << i << " val : " << tval << std::endl;
+		// for(int j = 0; j < 50; j++)
+		//	timage.at<unsigned char>(j, cnt) = floor(min(255.0, tval / 10));
+		// cnt++;
+	}
+	//cv::imshow("temptemp", timage);
+	//cv::waitKey();
+	std::cout << "**** initial horizon : " << cur_cam->getHorizon() << std::endl;
+#endif
 	// find yaw/x/z/vx by few sampling - hold features, targets fixed
 #if 0
 	double lkhood = 0;
