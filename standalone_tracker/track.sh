@@ -16,7 +16,7 @@ SEQNAME=$1
 rm -rf results/$SEQNAME.$POSTFIX
 mkdir results/$SEQNAME.$POSTFIX
 
-ROOTDIR=DATASET_DIRECTORY
+ROOTDIR=../sample/
 IMLIST=$ROOTDIR"$SEQNAME"_imlist.txt
 CONFLIST=$ROOTDIR"$SEQNAME"_conflist.txt
 INIT_CAM="--init_cam_focal 500.0 --init_cam_x 0 --init_cam_y 1.0 --init_cam_z 0.0 --init_cam_v 1.0 --init_cam_yaw 0.0 --init_cam_horizon 215.0 --init_cam_xcenter 320"
