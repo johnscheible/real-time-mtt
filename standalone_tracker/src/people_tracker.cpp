@@ -24,6 +24,7 @@ typedef struct _param_set {
 	std::string root_dir;
 	std::string im_list_file;
 	std::string conf_list_file;
+	std::string vp_list_file;
 	std::string	out_dir;
 	std::string	out_vid;
 
@@ -119,6 +120,7 @@ param_set parse_arguments(int ac, char **av)
 		("rootdir", po::value<std::string>(), "root directory of data")
 		("imglist", po::value<std::string>(), "image input list file (required)")
 		("conflist", po::value<std::string>(), "confidence input list file (required)")
+		("vplist", po::value<std::string>(), "vanishing point estimate file (optional)")
 		("outdir", po::value<std::string>(), "results directory")
 		("outvid", po::value<std::string>(), "output video")
 		("showimg", po::value<bool>(), "show results")
@@ -234,6 +236,13 @@ param_set parse_arguments(int ac, char **av)
 	}
 	else {
 		ret.conf_list_file = vm["conflist"].as<std::string>();
+	}
+
+	if(!vm.count("vplist"))  {
+		ret.vp_list_file = "";
+	}
+	else {
+		ret.vp_list_file = vm["vplist"].as<std::string>();
 	}
 
 	if(!vm.count("outdir"))  {
@@ -506,6 +515,11 @@ cv::Mat draw_features(ObservationManager *mgr, PosteriorDistPtr dist, cv::Mat &i
 {
 	cv::Mat image = image_color.clone();
 	CamStatePtr mean_cam = dist->getMeanCamera();
+	
+	int fsize1, fsize2, fsize3;
+	fsize1 = floor(image_color.cols / 400);
+	fsize2 = floor(image_color.cols / 200);
+	fsize3 = floor(image_color.cols / 50);
 
 	for(int i = 0; i < dist->getNumFeats(); i++) {
 		cv::Point2f pt2;
@@ -515,29 +529,33 @@ cv::Mat draw_features(ObservationManager *mgr, PosteriorDistPtr dist, cv::Mat &i
 			cv::Point2f pt = mean_cam->project(feats[j]);
 			pt2.x = pt.x;
 			pt2.y = pt.y;
-			cv::circle(image, pt2, 1, cv::Scalar(10, 10, 10), CV_FILLED);
+			cv::circle(image, pt2, fsize1, cv::Scalar(10, 10, 10), CV_FILLED);
 		}
 	}
 
 	std::vector<cv::Point2f> all_feats = mgr->getAllFeats();
 	for(size_t i = 0; i < all_feats.size(); i++) {
 		cv::Rect rt;
-		rt.x = all_feats[i].x - 5;
-		rt.y = all_feats[i].y - 5;
-		rt.width = 10; rt.height = 10;
+		rt.x = all_feats[i].x - fsize3/2;
+		rt.y = all_feats[i].y - fsize3/2;
+		rt.width = fsize3; rt.height = fsize3;
 
 		cv::Scalar col = cv::Scalar(155, 0, 155);
 		if(std::find(remove_idx.begin(), remove_idx.end(), i) != remove_idx.end()) {
 			col = cv::Scalar(255, 255, 255);
 		}
-		cv::rectangle(image, rt.tl(), rt.br(), col, 2);
+		cv::rectangle(image, rt.tl(), rt.br(), col, fsize2);
 	}
 	
 	assert(all_feats.size() == dist->getNumFeats());
 	
 	if(bshow) {
+#if 1
+		show_image(image, "features", 600);
+#else
 		cv::imshow("features", image);
 		cv::waitKey(30);
+#endif
 	}
 
 	return image;
@@ -549,8 +567,12 @@ cv::Mat draw_features2(TargetManager &mgr, double ts, cv::Mat &image_color, cons
 	image = mgr.drawFeatures(image, remove_idx, ts);
 
 	if(bshow) {
+#if 1
+		show_image(image, "features", 600);
+#else
 		cv::imshow("features", image);
 		cv::waitKey(30);
+#endif
 	}
 
 	return image;
@@ -570,7 +592,11 @@ void draw_confidence_map(ObservationManager *mgr, double height, CamStatePtr mca
 			cmap2.at<uchar>(r, c) = floor(tempval * 20 + 100);
 		}
 	}
+#if 1
+	show_image(cmap2, "conf", 600);
+#else
 	cv::imshow("conf", cmap2);
+#endif
 }
 
 void draw_detections(ObservationManager *mgr, cv::Mat &image_color)
@@ -579,18 +605,30 @@ void draw_detections(ObservationManager *mgr, cv::Mat &image_color)
 	cv::Mat image = image_color.clone();
 
 	std::vector<cv::Rect> dets;
+	int thickline = floor(image.cols / 300);
+
 	mgr->quaryData("detection_readin_detection", &dets);
 	for(size_t j = 0; j < dets.size(); j++) {
-		cv::rectangle(image, dets[j].tl(), dets[j].br(), cv::Scalar(0, 0, 150), 2);
+		cv::rectangle(image, dets[j].tl(), dets[j].br(), cv::Scalar(0, 0, 150), thickline);
 	}
+#if 1
+	show_image(image, "detection", 600);
+#else
 	cv::imshow("detection", image);
 	cv::waitKey(30);
+#endif
 }
 
 cv::Mat draw_targets(TargetManager &manager, cv::Mat &image_color, double timestamp, bool bshow = true)
 {
 	cv::Mat image = manager.drawTargets(image_color, timestamp);
-	if(bshow) cv::imshow("targets", image);
+	if(bshow) { 
+#if 1
+		show_image(image, "targets", 600);
+#else
+		cv::imshow("targets", image);
+#endif
+	}
 /*
 	image = image_color.clone();
 	std::vector<cv::Rect> rts = manager.getMSRects();
@@ -623,21 +661,27 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 	PeopleStatePtr ped;
 	cv::Rect rt;
 	
-	cv::Mat camera_view(image, cv::Rect(20, 20, 40, 40));
+	int thinline = floor(image.cols / 600);
+	int thickline = floor(image.cols / 300);
+	int boxsize = floor(image.cols / 20);
+
+	cv::Mat camera_view(image, cv::Rect(boxsize, boxsize, 2 * boxsize, 2 * boxsize));
+
 	camera_view = cv::Scalar(255, 255, 255);
-	cv::rectangle(camera_view, cv::Point(0,0), cv::Point(39, 39), cv::Scalar(0,0,0), 3);
+	cv::rectangle(camera_view, cv::Point(0,0), cv::Point(2 * boxsize, 2 * boxsize), cv::Scalar(0,0,0), thickline);
+
 	for( int i = 0; i < nsamples; i++ ) {
 		sample = dist->getSample(i);
 
 		ntargets = sample->getNumTargets();
 		cam = sample->getCamState();
-		cv::line(image, cv::Point(0, cam->getHorizon()), cv::Point(1000, cam->getHorizon()), cv::Scalar(255, 255, 255));
+		cv::line(image, cv::Point(0, cam->getHorizon()), cv::Point(image.cols, cam->getHorizon()), cv::Scalar(255, 0, 255), thinline);
 		// draw view point
 		double angle = cam->getYaw();
 		angle = -M_PI / 2 - angle;
 		double x = cos(angle), z = sin(angle);
 		// box
-		cv::line(camera_view, cv::Point(19, 19), cv::Point(19 + 20 * x, 19 + 20 * z), cv::Scalar(0,0,0), 1);
+		cv::line(camera_view, cv::Point(boxsize, boxsize), cv::Point(boxsize + boxsize * x, boxsize + boxsize * z), cv::Scalar(0,0,0), thinline);
 
 		// samples on image plane
 		for( int j = 0; j < ntargets; j++ ) {
@@ -672,13 +716,21 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 	}
 
 	if(bshow) {
+#if 1
+		show_image(image, "samples", 600);
+#else
 		cv::imshow("samples", image);
 		cv::waitKey(30);
+#endif
 	}
 
 	if(bshow) {
+#if 1
+		show_image(image_top, "top view", 600);
+#else
 		cv::imshow("top view", image_top);
 		cv::waitKey(30);
+#endif
 	}
 
 	return image;
@@ -694,12 +746,17 @@ int main (int ac, char** av)
 	///////////////////////////////////////////////////////////////
 	std::vector<std::string> im_files;
 	std::vector<std::string> conf_files;
+	std::vector<std::string> vp_files;
 
 	im_files = read_file_list(params.im_list_file);
 	conf_files = read_file_list(params.conf_list_file);
 	if(im_files.size() == 0 || conf_files.size() == 0) {
 		std::cout << "no valid imfile/conffile" << std::endl;
 		return -1;
+	}
+
+	if(params.vp_list_file != "") {
+		vp_files = read_file_list(params.vp_list_file);
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -808,7 +865,6 @@ int main (int ac, char** av)
 				params.init_cam_v,	params.init_cam_yaw, params.init_cam_horizon,
 				params.init_cam_focal, params.init_cam_xcenter,	0.0);
 	tracker.setInitialCamera(init_cam);
-
 	// feat_tracker.showImage(true);
 	mgr->setData((void*)&feat_tracker, "feat_tracker");
 	for(size_t i = 0; i < im_files.size(); i++) {
@@ -816,16 +872,29 @@ int main (int ac, char** av)
 		// process one frame!!!
 		std::string fname = params.root_dir + im_files[i];
 		std::string cname = params.root_dir + conf_files[i];
+
+		std::string vpname = "";
+		if(vp_files.size() > 0) {
+			vpname = params.root_dir + vp_files[i];
+		}
 		// get filenames 
 		std::cout << "process " << fname << std::endl;
+#if 1
 		cv::Mat image_color = cv::imread(fname);
 		cv::Mat image_mono; 
 		cvtColor(image_color, image_mono, CV_BGR2GRAY);
-
+#else
+		cv::Mat image_color_big = cv::imread(fname);
+		cv::Mat image_color;
+		cv::resize(image_color_big, image_color, cv::Size(500, 500));
+		cv::Mat image_mono; 
+		cvtColor(image_color, image_mono, CV_BGR2GRAY);
+#endif
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		// set data
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		mgr->setData((void*)&cname, "detection_readin_conf_file");
+		mgr->setData((void*)&vpname, "vp_estimate_file");
 		mgr->setData((void*)&image_color, "image_color");
 		mgr->setData((void*)&image_mono, "image_mono");
 		mgr->setData((void*)&timesec, "time_sec");
@@ -835,6 +904,18 @@ int main (int ac, char** av)
 		// process detector
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		mgr->preprocess();
+#if 0
+		CamStatePtr temptemp = boost::make_shared<CamState>();
+		temptemp->set(params.init_cam_x,	params.init_cam_y, params.init_cam_z,
+					params.init_cam_v,	params.init_cam_yaw, params.init_cam_horizon,
+					params.init_cam_focal, params.init_cam_xcenter,	0.0);
+		for(int iii = 1; iii < 2000; iii++) {
+			temptemp->setHorizon(iii);
+			std::cout << mgr->getCameraConfidence(temptemp)	<< setprecision(4) << " ";
+		}
+		std::cout << std::endl;
+		return 0;
+#endif
 		// run/set meanshift data
 		target_manager.runMeanShift(image_color);
 		tracker.setMeanShiftData(target_manager.getMSRects(), target_manager.getMSSims());
@@ -868,7 +949,7 @@ int main (int ac, char** av)
 		target_manager.updateMeanShiftTrackers(image_color);
 
 		// filter targets ...
-		std::vector<int> remove_idx = target_manager.getTerminatingTargets(0.1f);
+		std::vector<int> remove_idx = target_manager.getTerminatingTargets(0.1f, cv::Size(image_color.cols, image_color.rows));
 		tracker.filterTargets(remove_idx);
 
 		// process features ...

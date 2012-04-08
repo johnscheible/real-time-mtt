@@ -156,15 +156,18 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	}
 
 	unsigned int nums;
-	float det[5];
+	// IMPROTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// changed the detection format!!!!!!!!!!!!!!!!!!!!!!!!
+	// it include x, y, w, h, th, subtype
+	float det[6];
 
 	assert(sizeof(unsigned int) == 4);
 
 	nread = fread(&nums, sizeof(unsigned int), 1, fp);
 	assert(nread == 1);
 	for(size_t i = 0; i < nums; i++) {
-		nread = fread(det, sizeof(float), 5, fp);
-		assert(nread == 5);
+		nread = fread(det, sizeof(float), 6, fp);
+		assert(nread == 6);
 #ifdef USE_DET_RESPONSE
 		if(det[4] > 1.0) {
 			responses_.push_back(max((double)det[4], 0.0));

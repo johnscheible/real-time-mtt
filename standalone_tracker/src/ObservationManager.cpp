@@ -61,6 +61,7 @@ namespace people {
 		else if(type == "image_color") img_color_ = *(cv::Mat*)data;
 		else if(type == "time_sec") time_sec_ = *(double*)data;
 		else if(type == "feat_tracker") feat_tracker_ = (FeatTracker*)data;
+		else if(type == "vp_estimate_file") assert(vp_est_.readPreprocessedFile(*(std::string*)data));
 
 		std::vector<ObservationNode*>::iterator it;
 		for(it = nodes_.begin(); it < nodes_.end(); it++)
@@ -106,7 +107,7 @@ namespace people {
 		assert(feat_tracker_ != NULL);
 
 		feat_tracker_->setDetectorType("SURF");
-		cv::Mat img_cropped(img_mono_, cv::Rect(0, 200, 640, 280));
+		cv::Mat img_cropped(img_mono_, cv::Rect(0, floor(img_mono_.rows / 2), img_mono_.cols, floor(img_mono_.rows / 2)));
 		feat_tracker_->setNewImage(img_cropped, time_sec_);
 		feat_tracker_->processTracking();
 	}
@@ -122,7 +123,7 @@ namespace people {
 
 		feat_tracker_->get_features(time_sec_, feat_pts, responses, current_feat_idx);
 		for(size_t i = 0; i < feat_pts.size(); i++) {
-			feat_pts[i].y += 200;
+			feat_pts[i].y += floor(img_mono_.rows / 2);
 		}
 
 		std::vector<cv::Rect> dets = getDetections();
@@ -260,6 +261,11 @@ namespace people {
 		}
 #endif
 		return feat;
+	}
+
+	double 	ObservationManager::getCameraConfidence(CamStatePtr cam_state)
+	{
+		return vp_est_.getHorizonConfidence(cam_state->getHorizon());
 	}
 
 	double	ObservationManager::getPeopleConfidence(PeopleStatePtr ped_state, CamStatePtr cam_state, std::string type)

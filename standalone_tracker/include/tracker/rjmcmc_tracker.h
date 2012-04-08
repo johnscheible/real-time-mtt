@@ -344,6 +344,9 @@ namespace people {
 					//std::cout << " horizon : " << ret ;
 				}
 #endif
+#if 1
+				ret += obs_mgr_->getCameraConfidence(info.cam_state_) - obs_mgr_->getCameraConfidence(sample->getCamState());
+#endif
 				my_assert(!isnan(ret));
 				break;
 			default:

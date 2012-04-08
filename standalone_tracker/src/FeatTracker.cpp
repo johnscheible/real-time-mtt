@@ -223,7 +223,7 @@ void FeatTracker::processTracking()
 				}
 			}
 
-			if(min_dist > 25) {
+			if(min_dist > (current_image_.cols / 25)) {
 				imfeat_track new_track;
 				imfeat feat;
 				feat.pt_ = key_points[i].pt;

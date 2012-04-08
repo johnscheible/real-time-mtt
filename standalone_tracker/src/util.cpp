@@ -3,6 +3,25 @@
 #include <common/util.h>
 
 namespace people{
+	void show_image(cv::Mat &im, const std::string &name, int max_height)
+	{
+		cv::Size imsz(im.rows, im.cols);
+		cv::Mat resized;
+		if(max_height < imsz.height) {
+			double ratio = (double)max_height / (double)imsz.height;
+			imsz.height *= ratio;
+			imsz.width *= ratio;
+
+			cv::resize(im, resized, imsz);
+		}
+		else {
+			resized = im;			
+		}
+
+		cv::imshow(name, resized);
+		cv::waitKey(20);
+	}
+
 	bool in_any_rect(const std::vector<cv::Rect> &rts, const cv::Point2f &pt)
 	{
 		for(size_t i = 0; i < rts.size(); i++) {

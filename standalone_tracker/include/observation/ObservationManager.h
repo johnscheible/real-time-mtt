@@ -6,6 +6,7 @@
 #include <common/gfeat_state.h>
 #include <observation/ObservationNode.h>
 #include <common/FeatTracker.h>
+#include <common/vpestimator.h>
 
 namespace people {
 	class ObservationManager
@@ -28,6 +29,7 @@ namespace people {
 		virtual std::vector<int> preprocessFeats(const std::vector<int>& prev_feats_idx, const int max_feats, const std::vector<cv::Rect> &targets = std::vector<cv::Rect>());
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// getConfidence
+		virtual double 	getCameraConfidence(CamStatePtr cam_state);
 		virtual double	getPeopleConfidence(PeopleStatePtr ped_state, CamStatePtr cam_state, std::string type = std::string("all"));
 		virtual double	getGFeatConfidence(GFeatStatePtr feat_state, int feat_idx, CamStatePtr cam_state, std::string type = std::string("all"));
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,6 +59,8 @@ namespace people {
 		cv::Mat															img_color_;
 		cv::Mat															img_mono_;
 		FeatTracker*												feat_tracker_;
+
+		VPEstimator														vp_est_;
 
 		double															time_sec_;
 		double															total_weight_;

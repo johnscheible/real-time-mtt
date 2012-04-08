@@ -7,6 +7,8 @@
 #include <common/cam_state.h>
 
 namespace people {
+	void show_image(cv::Mat &im, const std::string &name, int max_height);
+
 	bool in_any_rect(const std::vector<cv::Rect> &rts, const cv::Point2f &pt);
 	bool inrect(const cv::Rect &rt, const cv::Point2f &pt);
 
