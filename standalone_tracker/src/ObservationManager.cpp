@@ -7,8 +7,6 @@
 #include <tbb/tbb_stddef.h>
 #endif
 
-#define MEAN_HEIGHT 1.7
-#define STD_HEIGHT	0.1
 namespace people {
 #ifdef HAVE_TBB
 	struct PreprocessInvoker
@@ -40,11 +38,23 @@ namespace people {
 
 		obs_lkhood_out_of_height_ = -15.0; // heavily penalize too tall/small human
 		feat_tracker_ = NULL;
+
+		obj_type_ = g_objtype; // ObjPerson;
+
+		mean_horizon_ = 0;
+		std_horizon_ = 0;
 	}
 
 	ObservationManager::~ObservationManager()
 	{
 		releaseNodes();
+	}
+
+	void ObservationManager::setObjType(ObjectType type) 
+	{
+		obj_type_ = type;
+		for(size_t i = 0; i < nodes_.size(); i++)
+			nodes_[i]->setObjType(type);
 	}
 
 	void ObservationManager::releaseNodes()
@@ -75,6 +85,8 @@ namespace people {
 		else if(name == "total_weight") total_weight_ = boost::lexical_cast<double>(value);
 		else if(name == "feat_sigma_u")  gfeat_sigma_u_ = boost::lexical_cast<double>(value);
 		else if(name == "feat_sigma_v")  gfeat_sigma_v_ = boost::lexical_cast<double>(value);
+		else if(name == "mean_horizon")  mean_horizon_ = boost::lexical_cast<double>(value);
+		else if(name == "std_horizon")  std_horizon_ = boost::lexical_cast<double>(value);
 
 		std::vector<ObservationNode*>::iterator it;
 		for(it = nodes_.begin(); it < nodes_.end(); it++)
@@ -265,7 +277,21 @@ namespace people {
 
 	double 	ObservationManager::getCameraConfidence(CamStatePtr cam_state)
 	{
-		return vp_est_.getHorizonConfidence(cam_state->getHorizon());
+		double ret = vp_est_.getHorizonConfidence(cam_state->getHorizon());
+
+		std::vector<int> votes;
+		std::vector<double> std;
+		getHorizonVotes(votes, std, cam_state->getY());
+
+		for(size_t i = 0; i < votes.size(); i++) {
+			double diff = votes[i] - cam_state->getHorizon();
+			ret -= min(pow(diff / std[i], 2), 9.0);
+		}
+		if(mean_horizon_ != 0) {
+			ret -= pow((cam_state->getHorizon() - mean_horizon_) / std_horizon_, 2);
+		}
+
+		return ret;
 	}
 
 	double	ObservationManager::getPeopleConfidence(PeopleStatePtr ped_state, CamStatePtr cam_state, std::string type)
@@ -367,13 +393,24 @@ namespace people {
 	void ObservationManager::getHorizonVotes(std::vector<int> &votes, std::vector<double> &stds, double camh)
 	{
 		std::vector<cv::Rect> dets = getDetections();
-		
 		votes.clear();
 		stds.clear();
 #ifdef HORIZON_EST
+		double mh, stdh;
+		if(obj_type_ == ObjPerson) {
+			mh = MEAN_PERSON_HEIGHT;
+			stdh = STD_PERSON_HEIGHT;
+		}
+		else if(obj_type_ == ObjCar) {
+			mh = MEAN_CAR_HEIGHT;
+			stdh = STD_CAR_HEIGHT;
+		}
+		else {
+			assert(0);
+		}
 		for(size_t i = 0; i < dets.size(); i++) {
-			votes.push_back( dets[i].y + round((double)dets[i].height * (MEAN_HEIGHT - camh) / MEAN_HEIGHT) );
-			stds.push_back((double)dets[i].height / MEAN_HEIGHT * STD_HEIGHT);
+			votes.push_back( dets[i].y + round((double)dets[i].height * (mh - camh) / mh) );
+			stds.push_back((double)dets[i].height / mh * stdh);
 		}
 #endif
 	}

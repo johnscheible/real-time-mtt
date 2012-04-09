@@ -20,6 +20,8 @@ namespace people {
 
 		virtual ~DetectionReadinConfidence() {};
 
+		void showMap();
+
 		float size_;
 		float size_ratio_;
 		float step_;
@@ -65,6 +67,7 @@ namespace people {
 		double det_std_h_;
 		
 		cv::Size imsize_;
+		double pos_threshold_;
 	};
 }; // Namespace
 

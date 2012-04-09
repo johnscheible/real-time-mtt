@@ -8,6 +8,31 @@
 #include <common/util.h>
 
 namespace people {
+
+void DetectionReadinConfidence::showMap()
+{
+	cv::Mat image(map_.rows, map_.cols, CV_8U);
+	
+	std::cout << " size_ " << size_ ;
+	std::cout << " size_ratio_ " << size_ratio_ ;
+	std::cout << " step_ " << step_ ;
+	std::cout << std::endl;
+
+	float minval = -3.0; 	
+	float maxval = 0.0;
+	float scale = 255 / (maxval - minval);
+	for(int i = 0; i < map_.rows; i++) {
+		for(int j = 0; j < map_.cols; j++) {
+			float temp = std::max(map_.at<float>(i, j), minval);
+			temp = std::min(temp, maxval) - minval;
+			unsigned char value = floor(temp * scale);
+			image.at<unsigned char>(i, j) = value;
+		}
+	}
+	cv::imshow("conf", image);
+	cv::waitKey(20);
+}
+
 DetectionReadinNode::DetectionReadinNode()
 {
 	node_type_ = "detection_readin_node";
@@ -21,6 +46,11 @@ DetectionReadinNode::DetectionReadinNode()
 	det_std_x_ = 0.05;
 	det_std_y_ = 0.1;
 	det_std_h_ = 0.1;
+	//
+	obj_type_ = g_objtype; // ObjPerson;
+	if(obj_type_ == ObjPerson)		pos_threshold_ = 1.0;
+	else if(obj_type_ == ObjCar)	pos_threshold_ = -.7;
+	else							assert(0);
 
 	init();
 }
@@ -169,15 +199,29 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 		nread = fread(det, sizeof(float), 6, fp);
 		assert(nread == 6);
 #ifdef USE_DET_RESPONSE
-		if(det[4] > 1.0) {
+		if( det[4] > pos_threshold_ ) {
 			responses_.push_back(max((double)det[4], 0.0));
 			// responses_.push_back(det[4] + 0.5);
 #else
-		if(det[4] > .5) {
+		if( det[4] > .5 ) {
 #endif
 			cv::Rect rt(det[0], det[1], det[2], det[3]); 
 			
-			rt.width = rt.height / WH_RATIO;
+			if(obj_type_ == ObjPerson) {
+				rt.width = rt.height / WH_PERSON_RATIO;
+			}
+			else if(obj_type_ == ObjCar) {
+				if(det[5] == 1) {
+					rt.width = rt.height / WH_CAR_RATIO1;
+				}
+				else if(det[5] == 2) {
+					rt.width = rt.height / WH_CAR_RATIO0;
+				}
+				else {
+					// only two type defined now..
+					assert(0);
+				}
+			}
 			// trick to use nms in opencv
 			found_.push_back(rt);
 			// found_.push_back(rt);
@@ -271,7 +315,10 @@ double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 	int idx = 0;
 	overlap = getMinDist2Dets(found_, idx, rt, det_std_x_, det_std_y_, det_std_h_);
 	if(overlap < 4.0) { // within range
-		overlap = (4.0 - overlap) * responses_[idx] / 2;
+		if(obj_type_ == ObjPerson)
+			overlap = (4.0 - overlap) * responses_[idx] / 2;
+		else if(obj_type_ == ObjCar)
+			overlap = (4.0 - overlap) * responses_[idx] * 2.0;
 	}
 	else { // too far
 		overlap = 0.0;
@@ -282,16 +329,28 @@ double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 	// overlap = getDist2AllDets(found_, rt, det_std_x_, det_std_y_, det_std_h_, 4.0) * 1 / 2;
 	// overlap = getOverlap2AllDets(found_, rt, 0.4) * 2 / 0.6;
 	cv::Point pt(rt.x, rt.y);
+	double whratio = (double)rt.width / (double)rt.height;
 	for(size_t i = 0; i < confidences_.size(); i++) {
-		if(rt.height >= (confidences_[i].size_ * (1 + 1 / det_scale_) / 2) 
+		if( abs(confidences_[i].size_ratio_ - whratio) < 0.1 * whratio
+			&& rt.height >= (confidences_[i].size_ * (1 + 1 / det_scale_) / 2) 
 			&& rt.height <= (confidences_[i].size_ * (1 + det_scale_) / 2)) {
+			assert(i % 2 == 1);
 			int x = floor((pt.x - confidences_[i].minx_) / confidences_[i].step_);
 			int y = floor((pt.y - confidences_[i].miny_) / confidences_[i].step_);
-
 			// check whether point is in image
 			if((x < 0) || (y < 0) || (x > confidences_[i].map_.cols) || (y > confidences_[i].map_.rows)) {
 				return (overlap + obs_out_of_image) * weight_;
 			}
+#if 0			
+			std::cout << " " << weight_ << " " << confidences_[i].map_.at<float>(y, x) << " " << overlap << " ";
+			std::cout << "conf : " << (overlap + confidences_[i].map_.at<float>(y, x)) * weight_ << " ";
+			cv::Rect rtt = rt;
+			print_rect(rtt);
+			std::cout << "idx " << i;
+			confidences_[i].showMap(); 
+			cv::waitKey();
+#endif
+
 			return (overlap + confidences_[i].map_.at<float>(y, x)) * weight_;
 		}
 	}

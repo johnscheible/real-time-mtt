@@ -540,7 +540,7 @@ CamStatePtr RJMCMCTracker::initializeCamera()
 	ObservationManager *mgr = obs_wrapper_.getManager();
 	//cv::Mat timage(50, 2000, CV_8U);
 	//int cnt = 0;
-	for(int i = 0; i < 2000; i += 1) {
+	for(int i = cur_cam->getHorizon() - 200; i < cur_cam->getHorizon() + 200; i += 1) {
 		temp->setHorizon(i);
 		double tval = mgr->getCameraConfidence(temp);
 		if(max_conf < tval) {

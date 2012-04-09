@@ -34,6 +34,7 @@ typedef struct _param_set {
 	
 	int 		iframe;
 	int 		eframe;
+	ObjectType	objtype;
 
 	double		fps;
 	// observation paramters
@@ -44,6 +45,9 @@ typedef struct _param_set {
 	double 		det_weight;
 	double 		det_threshold;
 	double 		det_scale;
+
+	double 		mean_horizon;
+	double		std_horizon;
 	// mcmc tracker related parameters
 	bool 		dbg_show;
 	int 		num_samples;
@@ -132,6 +136,7 @@ param_set parse_arguments(int ac, char **av)
 		("fps", po::value<double>(), "FPS (15)")
 		("iframe", po::value<int>(), "initial frame (0, optional)")
 		("eframe", po::value<int>(), "last frame (inf, optional)")
+		("objtype", po::value<std::string>(), "Person, Car (Person)")
 		// observation parameters
 		("min_height", po::value<double>(), "minimum height of a person (m) (1.2)")
 		("max_height", po::value<double>(), "maximum height of a person (m) (2.2)")
@@ -143,6 +148,8 @@ param_set parse_arguments(int ac, char **av)
 		("det_std_x", po::value<double>(), "detector std x (0.05 * deth)")
 		("det_std_y", po::value<double>(), "detector std y (0.1 * deth)")
 		("det_std_h", po::value<double>(), "detector std h (0.1 * deth)")
+		("mean_horizon", po::value<double>(), "mean horizon prior (0 none)")
+		("std_horizon", po::value<double>(), "std horizon prior (0 none)")
 		// tracker paramters
 		("dbg_show", po::value<bool>(), "debug prints (false)")
 		("num_samples", po::value<int>(), "number of samples in MCMC (5000)")
@@ -294,6 +301,13 @@ param_set parse_arguments(int ac, char **av)
 	if(!vm.count("eframe"))  { ret.eframe = 100000; }
 	else {	ret.eframe = vm["eframe"].as<int>();	}
 
+	if(!vm.count("objtype"))  { ret.objtype = ObjPerson; }
+	else {	
+		std::string type = vm["objtype"].as<std::string>();	
+		if(type == "Person") ret.objtype = ObjPerson;
+		else if(type == "Car") ret.objtype = ObjCar;
+		else assert(0);
+	}
 	//////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////
 	// observation parameters
@@ -319,6 +333,11 @@ param_set parse_arguments(int ac, char **av)
 	else {	ret.detection_std_y = vm["det_std_y"].as<double>(); }
 	if(!vm.count("det_std_h"))  { ret.detection_std_h = 0.1;	}
 	else {	ret.detection_std_h = vm["det_std_h"].as<double>(); }
+
+	if(!vm.count("mean_horizon"))  { ret.mean_horizon = 0.0; }
+	else {	ret.mean_horizon = vm["mean_horizon"].as<double>();	}
+	if(!vm.count("std_horizon"))  { ret.std_horizon = 0.0; }
+	else {	ret.std_horizon = vm["std_horizon"].as<double>();	}
 	//////////////////////////////////////////////////////////////////
 
 	//////////////////////////////////////////////////////////////////
@@ -752,7 +771,8 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 int main (int ac, char** av)
 {
 	param_set params = parse_arguments(ac, av);
-	
+	// set object type
+	g_objtype = params.objtype;
 	///////////////////////////////////////////////////////////////
 	// read input list
 	///////////////////////////////////////////////////////////////
@@ -766,11 +786,9 @@ int main (int ac, char** av)
 		std::cout << "no valid imfile/conffile" << std::endl;
 		return -1;
 	}
-
 	if(params.vp_list_file != "") {
 		vp_files = read_file_list(params.vp_list_file);
 	}
-
 	//////////////////////////////////////////////////////////////
 	cv::VideoWriter video_target;
 	cv::VideoWriter video_samples;
@@ -780,18 +798,17 @@ int main (int ac, char** av)
 	double fps = params.fps;
 	if(params.out_vid != "") {
 		std::string fname = params.out_vid + "_target.avi";
-		if(!video_target.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(640 , 480), true))
+		if(!video_target.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(500 , 500), true))
 		my_assert(video_target.isOpened());
 
 		fname = params.out_vid + "_samples.avi";
-		if(!video_samples.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(640 , 480), true))
+		if(!video_samples.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(500 , 500), true))
 		my_assert(video_samples.isOpened());
 
 		fname = params.out_vid + "_feature.avi";
-		if(!video_feature.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(640 , 480), true))
+		if(!video_feature.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(500 , 500), true))
 		my_assert(video_feature.isOpened());
 	}
-
 	///////////////////////////////////////////////////////////////
 	TargetManager		target_manager;
 	ObservationManager 	*mgr = createManager();
@@ -810,6 +827,10 @@ int main (int ac, char** av)
 	mgr->setParameters("detection_std_x", boost::lexical_cast<std::string>(params.detection_std_x));
 	mgr->setParameters("detection_std_y", boost::lexical_cast<std::string>(params.detection_std_y));
 	mgr->setParameters("detection_std_h", boost::lexical_cast<std::string>(params.detection_std_h));
+	mgr->setParameters("mean_horizon", boost::lexical_cast<std::string>(params.mean_horizon));
+	mgr->setParameters("std_horizon", boost::lexical_cast<std::string>(params.std_horizon));
+	// set object types!!!!
+	mgr->setObjType(params.objtype);
 	//
 	tracker.setParameters("ShowDebugMsg", boost::lexical_cast<std::string>(params.dbg_show));
 	tracker.setParameters("MCMCNumSamples", boost::lexical_cast<std::string>(params.num_samples));
@@ -1002,7 +1023,7 @@ int main (int ac, char** av)
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		// draw functions
 		/////////////////////////////////////////////////////////////////////////////////////////////////
-		if(params.showimg) draw_confidence_map(mgr, 1.7, mean_cam);
+		if(params.showimg) draw_confidence_map(mgr, 1.1, mean_cam);
 		frame = draw_targets(target_manager, image_color, timesec, params.showimg);
 		if(video_target.isOpened()) {
 			video_target << frame;

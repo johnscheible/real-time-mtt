@@ -319,7 +319,7 @@ namespace people {
 					ret += (double)(new_feat_cache_[i] - feat_cache_[i]);
 				}
 				//std::cout << " feats : " << ret ;
-#ifdef HORIZON_EST
+#if 0 // def HORIZON_EST
 				// horizon observation using detections!!!
 				{
 					std::vector<int> votes;

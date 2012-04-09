@@ -54,10 +54,12 @@ namespace people {
 		virtual void preprocess(){ /* Do nothing */ };
 		virtual std::vector<cv::Rect> getDetections(){ std::vector<cv::Rect> empty; return empty; };
 		virtual void quaryData(const std::string &name, void *data) {};
+
+		virtual void setObjType(ObjectType type) {obj_type_ = type;}
 	protected:
 		std::string 	node_type_;
-		double				weight_;
-
+		double			weight_;
+		ObjectType 		obj_type_;
 		static boost::signals2::mutex	preprocess_mutex_; // gpu cannot be shared...
 	};
 }; // Namespace

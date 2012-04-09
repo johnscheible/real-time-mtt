@@ -731,15 +731,15 @@ cv::Mat TargetManager::drawTargets(cv::Mat &image_color, double ts)
 				}
 				
 				cv::Rect rt = targets_[i]->getRect(state_idx);
-				double width = floor(6 * targets_[i]->getState(state_idx)->getConfidence());
+				double width = floor(image_draw.cols / 100 * targets_[i]->getState(state_idx)->getConfidence());
 				cv::Scalar color = get_target_color(idx);
 
 				cv::rectangle(image_draw, rt.tl(), rt.br(), color, width);
 
 				ostringstream text;
-				text << "Target" << idx << ", " << std::setprecision(2) << targets_[i]->getState(state_idx)->getConfidence();
-				rt.y -= 6;
-				cv::putText(image_draw, text.str(), rt.tl(), cv::FONT_HERSHEY_SIMPLEX, .4, color, 1);
+				text << "T" << idx << ", " << std::setprecision(2) << targets_[i]->getState(state_idx)->getConfidence();
+				rt.y -= image_draw.cols / 100;
+				cv::putText(image_draw, text.str(), rt.tl(), cv::FONT_HERSHEY_SIMPLEX, .4 * image_draw.cols / 500, color, image_draw.cols / 500);
 			}
 			idx++;
 		}

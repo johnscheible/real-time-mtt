@@ -17,7 +17,7 @@ FeatTracker::FeatTracker()
 	detector_type_ = "SURF";
 
 	max_features_ = 300;
-	max_flow_dist_ = 50;
+	max_flow_dist_ = 0.1;
 	show_image_ = false;
 }
 
@@ -175,7 +175,7 @@ void FeatTracker::processTracking()
 
 		for(size_t i = 0; i < pts.size(); i++) {
 			float dist = sqrt(pow(pts[i].x - npts[i].x, 2) + pow(pts[i].y - npts[i].y, 2));
-			valid.push_back(status[i] == 1 && dist < max_flow_dist_ && isValidGroundFeature(npts[i]));
+			valid.push_back(status[i] == 1 && dist < (max_flow_dist_ * current_image_.cols) && isValidGroundFeature(npts[i]));
 			if(valid[i]) { // succeeded to track
 				// insert new location to feature track
 				imfeat feat;

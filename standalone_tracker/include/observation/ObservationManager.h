@@ -17,6 +17,7 @@ namespace people {
 
 		void 		releaseNodes();
 		
+		void 		setObjType(ObjectType type);
 		void 								insertObservationNode(ObservationNode* node);
 		ObservationNode 		*getObservationNode(std::string &type);
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,6 +76,11 @@ namespace people {
 
 		double 															gfeat_sigma_u_; 
 		double															gfeat_sigma_v_; 
+
+		ObjectType 														obj_type_;
+
+		double 								mean_horizon_;
+		double 								std_horizon_;
 	};
 }; // Namespace
 #endif // _OBSERVATION_MANAGER_H_
