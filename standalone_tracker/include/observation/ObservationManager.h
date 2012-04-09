@@ -56,6 +56,9 @@ namespace people {
 		inline cv::Mat	getImageMono() {return img_mono_;}
 
 		void getHorizonVotes(std::vector<int> &votes, std::vector<double> &stds, double camh);
+
+		// misc functions
+		virtual VPEstimator* getVPEstimator() { return &vp_est_; }
 	protected:
 		cv::Mat															img_color_;
 		cv::Mat															img_mono_;

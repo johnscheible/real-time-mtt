@@ -3,6 +3,13 @@
 
 namespace people {
 
+void print_line(const longline &line)
+{
+	std::cout << "line : " << line.x1_ << " " << line.x2_ << " "
+							<< line.y1_ << " " << line.y2_ << " "
+							<< line.angle_ << " " << line.length_ << std::endl;
+}
+
 VPEstimator::VPEstimator()
 {
 	weight_ = .1;
@@ -17,7 +24,6 @@ VPEstimator::~VPEstimator()
 
 void VPEstimator::preprocess(cv::Mat &image, double timestamp)
 {
-	lines_.clear();
 }
 
 bool VPEstimator::readPreprocessedFile(const std::string &filename)
@@ -132,8 +138,7 @@ double VPEstimator::getHorizonConfidence(int hor)
 double VPEstimator::getMaxHorizonVote(int idx)
 {
 	double ret = 0.0;
-
-	if(idx == vmap_.rows) return 0.0;
+	if(idx >= vmap_.rows) return 0.0;
 	assert(vmap_.rows > idx);
 	for(int i = 0; i < vmap_.cols; i++) {
 		if(ret < vmap_.at<float>(idx, i)) {
@@ -141,6 +146,91 @@ double VPEstimator::getMaxHorizonVote(int idx)
 		}
 	}
 	return ret * weight_;
+}
+
+cv::Mat VPEstimator::getVPConfImage(int width)
+{
+	float scale = 255.0/1000.0;
+
+	cv::Mat image(1,1,CV_8U);
+	if(lines_.size() == 0) { // no info
+		return image;
+	}
+
+	int ratio = floor((double)width/vmap_.cols);
+	image = cv::Mat(vmap_.rows * ratio, vmap_.cols * ratio, CV_8U);
+	
+	for(int i = 0; i < vmap_.rows; i++) {
+		for(int j = 0; j < vmap_.cols; j++) {
+			float val = std::min(scale * vmap_.at<float>(i, j), (float)255.0);
+			for(int k = 0; k < ratio; k++) {
+				for(int l = 0; l < ratio; l++) {
+					assert(i * ratio + k < image.rows);
+					assert(j * ratio + l < image.cols);
+
+					image.at<unsigned char>(i * ratio + k, j * ratio + l) = (unsigned char)floor(val);
+				}
+			}
+		}
+	}
+
+	return image;
+}
+
+cv::Point2f VPEstimator::findVanishingPoint(int horizon, float delta)
+{
+	int yidx = floor((double)horizon / votestep_);
+	int xidx = 0;
+	double max_vote = 0.0;
+
+	for(int x = 0; x < vmap_.cols; x++) {
+		if(max_vote < vmap_.at<float>(yidx, x)) {
+			max_vote = vmap_.at<float>(yidx, x);
+			xidx = x;
+		}
+	}
+
+	return cv::Point2f(votestep_ * xidx, horizon);
+}
+
+// refer to Varsha Hedau ICCV09
+float VPEstimator::getVotingAngle(const longline &line, const cv::Point2f &pt)
+{
+	float alpha;
+	float mx = (line.x1_ + line.x2_) / 2;
+	float my = (line.y1_ + line.y2_) / 2;
+	
+	cv::Point2f v1(pt.x - mx, pt.y - my);
+	cv::Point2f v2(line.x2_ - line.x1_, line.y2_ - line.y1_);
+	
+	float len = norm(v1);
+	v1.x = v1.x / len;
+	v1.y = v1.y / len;
+	len = norm(v2);
+	v2.x = v2.x / len;
+	v2.y = v2.y / len;
+
+	alpha = acosf(v1.x * v2.x + v1.y * v2.y);
+	if(alpha > M_PI / 2) {
+		alpha = M_PI - alpha;
+	}
+	// mpt = [(line(1) + line(2)) / 2, (line(3) + line(4)) / 2]; 
+	// equ2 = null([pt, 1; mpt, 1])';
+	// alpha = atan2(abs(equ(1) * equ2(2) - equ2(1) * equ(2)), abs(equ(1) * equ2(1) + equ(2) * equ2(2)));
+	return alpha;
+}
+
+std::vector<longline> VPEstimator::getLinesIntersectingPoint(const cv::Point2f &pt, const float epstheta)
+{
+	std::vector<longline> lines;
+	for(size_t i = 0; i < lines_.size(); i++) {
+		// std::cout << " angle : " << getVotingAngle(lines_[i], pt) << std::endl;
+		if(getVotingAngle(lines_[i], pt) < epstheta && lines_[i].y1_ > pt.y && lines_[i].y2_ > pt.y) {
+			// print_line(lines_[i]);
+			lines.push_back(lines_[i]);
+		}
+	}
+	return lines;
 }
 
 };

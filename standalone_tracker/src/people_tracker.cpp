@@ -912,17 +912,9 @@ int main (int ac, char** av)
 		}
 		// get filenames 
 		std::cout << "process " << fname << std::endl;
-#if 1
 		cv::Mat image_color = cv::imread(fname);
 		cv::Mat image_mono; 
 		cvtColor(image_color, image_mono, CV_BGR2GRAY);
-#else
-		cv::Mat image_color_big = cv::imread(fname);
-		cv::Mat image_color;
-		cv::resize(image_color_big, image_color, cv::Size(500, 500));
-		cv::Mat image_mono; 
-		cvtColor(image_color, image_mono, CV_BGR2GRAY);
-#endif
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		// set data
 		/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -960,6 +952,11 @@ int main (int ac, char** av)
 		tracker.setData(mgr, proposal_rts);
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		if(params.showimg) draw_detections(mgr, image_color);
+		if(params.showimg) {
+			cv::Mat votemap = mgr->getVPEstimator()->getVPConfImage(600);
+			cv::imshow("vote", votemap);
+			cv::waitKey(30);
+		}
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		// run tracking
 		/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1024,7 +1021,22 @@ int main (int ac, char** av)
 		// draw functions
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		if(params.showimg) draw_confidence_map(mgr, 1.1, mean_cam);
+		
 		frame = draw_targets(target_manager, image_color, timesec, params.showimg);
+		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getHorizon(), 0.0);
+		cv::circle(frame, pt, 20, cv::Scalar(0, 0, 255), 10);
+		std::vector<longline> lines = mgr->getVPEstimator()->getAllLines();
+		for(size_t k = 0; k < lines.size(); k++) {
+			cv::line(frame, cv::Point(lines[k].x1_, lines[k].y1_), cv::Point(lines[k].x2_, lines[k].y2_), cv::Scalar(0, 255, 0), frame.cols / 500);
+		}
+		lines = mgr->getVPEstimator()->getLinesIntersectingPoint(pt);
+		for(size_t k = 0; k < lines.size(); k++) {
+			cv::line(frame, cv::Point(lines[k].x1_, lines[k].y1_), cv::Point(lines[k].x2_, lines[k].y2_), cv::Scalar(0, 0, 255), frame.cols / 200);
+		}
+		if(params.showimg) {
+			show_image(frame, "VP", 600);
+		}
+
 		if(video_target.isOpened()) {
 			video_target << frame;
 		}
