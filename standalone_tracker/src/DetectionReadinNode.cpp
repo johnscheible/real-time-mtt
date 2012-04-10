@@ -51,7 +51,7 @@ DetectionReadinNode::DetectionReadinNode()
 	//
 	obj_type_ = g_objtype; // ObjPerson;
 	if(obj_type_ == ObjPerson)		pos_threshold_ = 0.0;
-	else if(obj_type_ == ObjCar)	pos_threshold_ = -.7;
+	else if(obj_type_ == ObjCar)	pos_threshold_ = -.5;
 	else							assert(0);
 
 	init();

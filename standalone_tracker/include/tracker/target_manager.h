@@ -1,6 +1,7 @@
 #ifndef _TARGET_MANAGER_H_
 #define _TARGET_MANAGER_H_
 
+#include <common/lines.h>
 #include <common/ped_state.h>
 #include <common/cam_state.h>
 #include <common/gfeat_state.h>
@@ -102,6 +103,31 @@ namespace people {
 	protected:
 		std::vector<CamStatePtr> states_;
 	};
+	
+	class Lines
+	{
+	public:
+		Lines();
+		Lines(const Lines &src);
+		Lines(double timesec);
+
+		virtual ~Lines();
+		void setTimesec(double timesec);
+		double getTimesec();
+
+		void setLines(const std::vector<longline> &lines);
+		void setLanes(const std::vector<longline> &lanes);
+
+		std::vector<longline> getLines() { return lines_; }
+		std::vector<longline> getLanes() { return lanes_; }
+
+		bool writeLinesToFile(std::ofstream &out);
+		bool writeLanesToFile(std::ofstream &out);
+	protected:
+		std::vector<longline> 	lines_;
+		std::vector<longline> 	lanes_;
+		double 					timesec_;
+	};
 
 	class TargetManager
 	{
@@ -163,6 +189,14 @@ namespace people {
 		std::vector<MSTarget>		ms_targets_;
 		std::vector<cv::Rect>		ms_rts_;
 		std::vector<float>			ms_sims_;
+
+	public:
+		void updateLines(const std::vector<longline> &lines, const std::vector<longline> &lanes, double timestamp);
+	protected:
+		int	 findLines(double timesec);
+		void saveAllLines(std::string &dirname);
+		// added for lane detection
+		std::vector<Lines>		lines_;
 	};
 };
 #endif // _TARGET_MANAGER_H_

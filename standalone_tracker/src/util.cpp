@@ -327,6 +327,13 @@ namespace people{
 		std::cout << "x : " << rt.x << " y : " << rt.y << " width : " << rt.width << " height : " << rt.height << std::endl;
 	}
 
+	void print_line(const longline &line)
+	{
+		std::cout << "line : " << line.x1_ << " " << line.x2_ << " "
+								<< line.y1_ << " " << line.y2_ << " "
+								<< line.angle_ << " " << line.length_ << std::endl;
+	}
+
 	void print_matrix(cv::Mat &mat)
 	{
 		std::cout << "rows : " << mat.rows << ", cols : " << mat.cols << std::endl;

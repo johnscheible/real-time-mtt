@@ -1016,13 +1016,8 @@ int main (int ac, char** av)
 
 		tracker.filterFeatures(remove_idx);
 		target_manager.updateCamera(mean_cam);
-		/////////////////////////////////////////////////////////////////////////////////////////////////
-		/////////////////////////////////////////////////////////////////////////////////////////////////
-		// draw functions
-		/////////////////////////////////////////////////////////////////////////////////////////////////
-		if(params.showimg) draw_confidence_map(mgr, 1.1, mean_cam);
-		
-		frame = draw_targets(target_manager, image_color, timesec, params.showimg);
+#if 0
+		//
 		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getHorizon(), 0.0);
 		cv::circle(frame, pt, 20, cv::Scalar(0, 0, 255), 10);
 		std::vector<longline> lines = mgr->getVPEstimator()->getAllLines();
@@ -1036,7 +1031,15 @@ int main (int ac, char** av)
 		if(params.showimg) {
 			show_image(frame, "VP", 600);
 		}
-
+#endif
+		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getHorizon(), 0.0);
+		target_manager.updateLines(mgr->getVPEstimator()->getAllLines(), mgr->getVPEstimator()->getLinesIntersectingPoint(pt), timesec);
+		/////////////////////////////////////////////////////////////////////////////////////////////////
+		/////////////////////////////////////////////////////////////////////////////////////////////////
+		// draw functions
+		/////////////////////////////////////////////////////////////////////////////////////////////////
+		if(params.showimg) draw_confidence_map(mgr, 1.1, mean_cam);
+		frame = draw_targets(target_manager, image_color, timesec, params.showimg);
 		if(video_target.isOpened()) {
 			video_target << frame;
 		}
@@ -1046,7 +1049,7 @@ int main (int ac, char** av)
 			video_samples << frame;
 		}
 #if 1
-		if(i % 50 == 0) {
+		if(i % 50 == 49) {
 			target_manager.saveAll(params.out_dir);
 		}
 #else

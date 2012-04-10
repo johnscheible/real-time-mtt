@@ -3,13 +3,6 @@
 
 namespace people {
 
-void print_line(const longline &line)
-{
-	std::cout << "line : " << line.x1_ << " " << line.x2_ << " "
-							<< line.y1_ << " " << line.y2_ << " "
-							<< line.angle_ << " " << line.length_ << std::endl;
-}
-
 VPEstimator::VPEstimator()
 {
 	weight_ = .1;

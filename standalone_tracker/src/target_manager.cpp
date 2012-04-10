@@ -255,6 +255,103 @@ int Camera::findIdx(double ts)
 	return -1;
 }
 
+Lines::Lines()
+{
+}
+
+Lines::Lines(double timesec)
+{
+	timesec_ = timesec;
+}
+
+Lines::Lines(const Lines &src)
+{
+	timesec_ = src.timesec_;
+	lines_ = src.lines_;
+	lanes_ = src.lanes_;
+}
+
+Lines::~Lines()
+{
+}
+
+void Lines::setTimesec(double timesec)
+{
+	timesec_ = timesec;
+}
+
+double Lines::getTimesec()
+{
+	return timesec_;
+}
+
+void Lines::setLines(const std::vector<longline> &lines)
+{
+	lines_ = lines;
+}
+
+void Lines::setLanes(const std::vector<longline> &lanes)
+{
+	lanes_ = lanes;
+}
+
+// bool Lines::writeLanesToFile(std::string filename)
+bool Lines::writeLanesToFile(std::ofstream &out)
+{
+#if 0
+	std::ofstream out(filename.c_str()); 
+	if(!out) { 
+		cout << "Line::writeLanesToFile - Cannot open file " << filename << std::endl; 
+		return false;
+	} 
+#endif
+	out << std::setprecision(30) 
+		<< timesec_ << " " 
+		<< lanes_.size() << " "
+		<< std::endl;
+
+	for(size_t i = 0; i < lanes_.size(); i++) {
+		out << std::setprecision(30) 
+				  << lanes_[i].x1_ << " "
+				  << lanes_[i].x2_ << " "
+				  << lanes_[i].y1_ << " "
+				  << lanes_[i].y2_ << " "
+				  << lanes_[i].angle_ << " "
+				  << lanes_[i].length_ << " "
+				  << std::endl;
+	}
+	return true;
+}
+
+// bool Lines::writeLinesToFile(std::string filename)
+bool Lines::writeLinesToFile(std::ofstream &out)
+{
+#if 0
+	std::ofstream out(filename.c_str()); 
+	if(!out) { 
+		cout << "Line::writeLinesToFile - Cannot open file " << filename << std::endl; 
+		return false;
+	} 
+#endif
+	out << std::setprecision(30) 
+		<< timesec_ << " " 
+		<< lines_.size() << " "
+		<< std::endl;
+
+	for(size_t i = 0; i < lines_.size(); i++) {
+		out << std::setprecision(30) 
+				  << lines_[i].x1_ << " "
+				  << lines_[i].x2_ << " "
+				  << lines_[i].y1_ << " "
+				  << lines_[i].y2_ << " "
+				  << lines_[i].angle_ << " "
+				  << lines_[i].length_ << " "
+				  << std::endl;
+	}
+
+	return true;
+}
+
 ////////////////////////////////
 TargetManager::TargetManager()
 {
@@ -562,6 +659,7 @@ void TargetManager::saveAll(std::string &dirname)
 	saveAllCamera(dirname);
 	saveAllFeatures(dirname);
 	saveAllTargets(dirname);
+	saveAllLines(dirname);
 }
 
 std::vector<int> TargetManager::getTerminatingTargets(double threshold, cv::Size im_size)
@@ -744,6 +842,71 @@ cv::Mat TargetManager::drawTargets(cv::Mat &image_color, double ts)
 			idx++;
 		}
 	}
+	
+	idx = findLines(ts);
+	if(idx >= 0) {
+		std::vector<longline> lines = lines_[idx].getLines();
+		for(size_t k = 0; k < lines.size(); k++) {
+			cv::line(image_draw, cv::Point(lines[k].x1_, lines[k].y1_), cv::Point(lines[k].x2_, lines[k].y2_), cv::Scalar(0, 150, 255), image_draw.cols / 250);
+		}
+
+		lines = lines_[idx].getLanes();
+		for(size_t k = 0; k < lines.size(); k++) {
+			cv::line(image_draw, cv::Point(lines[k].x1_, lines[k].y1_), cv::Point(lines[k].x2_, lines[k].y2_), cv::Scalar(219, 112, 147), image_draw.cols / 100);
+		}
+	}
 
 	return image_draw;
+}
+
+int TargetManager::findLines(double timesec)
+{
+	for(int i = 0; i < lines_.size(); i++) {
+		if(timesec == lines_[i].getTimesec()) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void TargetManager::updateLines(const std::vector<longline> &lines, const std::vector<longline> &lanes, double timestamp)
+{
+	int idx = findLines(timestamp);
+	if(idx < 0) {
+		Lines line(timestamp);
+		line.setLines(lines);
+		line.setLanes(lanes);
+		lines_.push_back(line);
+	}
+	else {
+		lines_[idx].setLines(lines);
+		lines_[idx].setLanes(lanes);
+	}
+}
+
+void TargetManager::saveAllLines(std::string &dirname)
+{
+	std::string filename = dirname + "/lines.txt";
+
+	std::ofstream out(filename.c_str()); 
+	if(!out) { 
+		cout << "TargetManager::saveAllLines - Cannot open file " << filename << std::endl; 
+		assert(0);
+	}
+	for(size_t i = 0; i < lines_.size(); i++) {
+		lines_[i].writeLinesToFile(out);
+	}
+	out.close();
+
+	filename = dirname + "/lanes.txt";
+	std::ofstream out2(filename.c_str());
+	if(!out2) { 
+		cout << "TargetManager::saveAllLines - Cannot open file " << filename << std::endl; 
+		assert(0);
+	}
+	for(size_t i = 0; i < lines_.size(); i++) {
+		lines_[i].writeLanesToFile(out2);
+	}
+	out2.close();
 }

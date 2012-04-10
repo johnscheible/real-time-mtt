@@ -5,6 +5,7 @@
 #include <common/ped_state.h>
 #include <common/gfeat_state.h>
 #include <common/cam_state.h>
+#include <common/lines.h>
 
 namespace people {
 	void show_image(cv::Mat &im, const std::string &name, int max_height);
@@ -36,6 +37,7 @@ namespace people {
 	std::vector<std::string> read_file_list(const std::string &filename);
 
 	void print_rect(cv::Rect &rt);
+	void print_line(const longline &line);
 	void print_matrix(cv::Mat &mat);
 #ifdef MYDEBUG
 #define my_assert(x) assert(x)

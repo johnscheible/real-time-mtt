@@ -660,6 +660,13 @@ SampleInfo RJMCMCProposal::updateFeature(MCMCSamplePtr sample)
 	}
 	else {
 		ret.idx_ = idx - set_feat_leave_.size() + prev_dist_->getNumFeats();
+
+		if(!sample->getFeatValidity(ret.idx_) || ret.idx_ >= sample->getNumGFeats()) { 
+			std::cout << "Not valid why ? => " << ret.idx_ << std::endl;
+			ret.type_ = MoveNone;
+			return ret;
+		}
+
 		// perturb 
 		feat_state = sample->getFeatState(ret.idx_)->clone();
 

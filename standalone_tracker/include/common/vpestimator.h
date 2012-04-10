@@ -4,19 +4,9 @@
 #include <iostream>
 #include <string>
 #include <opencv/cv.h>
+#include <common/lines.h>
 
 namespace people {
-	typedef struct _longline {
-		float x1_;
-		float x2_;
-		float y1_;
-		float y2_;
-		float angle_;
-		float length_;
-	}longline;
-	
-	void print_line(const longline &line);
-
 	class VPEstimator {
 	public:
 		VPEstimator();
