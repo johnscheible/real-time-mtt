@@ -12,7 +12,7 @@ end
 top = [];
 num_dets = fread(fp, 1, 'uint');
 for i = 1:num_dets
-    top(i, :) = fread(fp, 5, 'single');
+    top(i, :) = fread(fp, 6, 'single');
 end
 
 if nargout < 2

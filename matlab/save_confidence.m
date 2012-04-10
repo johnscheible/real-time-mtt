@@ -6,7 +6,7 @@ fwrite(fp,'CONF','char');
 num_dets = size(top, 1);
 fwrite(fp, num_dets, 'uint');
 for i = 1:size(top, 1)
-    fwrite(fp, single(top(i, [1:4 end])), 'single');
+    fwrite(fp, single(top(i, [1:4 end 5])), 'single');
 end
 
 num_conf = length(conf);

@@ -4,7 +4,12 @@ if nargin < 3
 end
 addpath(genpath(obank_dir));
 
-data = load(['./voc-release3.1/VOC2008/' name '_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
+if ~strcmp(name, 'INRIA')
+    data = load(['./voc-release3.1/VOC2008/' name '_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
+else
+    data = load(['./voc-release3.1/INRIA/inria_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
+end
+
 model = data.model;
 clear data;
 if ~exist(outdir, 'dir')
@@ -13,46 +18,48 @@ end
 
 matlabpool open 8
 files = dir([imdir '/*.' ext]);
-parfor i = 1:length(files)
-% for i = 1:length(files)
-	filename = [imdir '/' files(i).name];
-	conf_file = [outdir '/' files(i).name(1:end-4) '.conf'];
+for idx = 1:16:length(files)
+    parfor j = 1:16
+        i = idx + j - 1;
+        
+        filename = [imdir '/' files(i).name];
+        conf_file = [outdir '/' files(i).name(1:end-4) '.conf'];
 
-    disp(['process ' filename]);
-    
-	if(~exist(filename)) 
-		disp(['file ' filename ' doesnot exist?\n'])
-		continue;
-	end
+        disp(['process ' filename]);
 
-	if(exist(conf_file))
-		continue;
-	end
-	% run LSVM detector
-    im = imread(filename); 
-    
-    if (size(im, 1) < 500)
-        resizefactor = 2.0;
-    else
-        resizefactor  = 1000 / size(im, 1);
+        if(~exist(filename)) 
+            disp(['file ' filename ' doesnot exist?\n'])
+            continue;
+        end
+
+        if(exist(conf_file))
+            continue;
+        end
+
+        % run LSVM detector
+        try
+            im = imread(filename); 
+
+            if (size(im, 1) < 500)
+                resizefactor = 2.0;
+            else
+                resizefactor  = 1000 / size(im, 1);
+            end
+
+            im = imresize(double(im), resizefactor);
+
+            [feat_py, scales] = featpyramid(im, 8, 10);
+        %     Level = 1:model.interval:length(scales);
+            Level=(model.interval+1):1:length(scales);
+            [bbox, responsemap] = detect_with_responsemap(Level, feat_py, scales, im, model, model.thresh);
+
+            top = reformDetections(bbox, resizefactor);
+            conf = getConfidenceMap(responsemap, scales(Level), model, resizefactor);
+            save_confidence(conf_file, top, conf);
+        catch ee
+
+        end
     end
-    
-    im = imresize(double(im), resizefactor);
-	
-    [feat_py, scales] = featpyramid(im, 8, 10);
-%     Level = 1:model.interval:length(scales);
-    Level=(model.interval+1):1:length(scales);
-    [bbox, responsemap] = detect_with_responsemap(Level, feat_py, scales, im, model, model.thresh);
- 
-    top = reformDetections(bbox, resizefactor);
-    conf = getConfidenceMap(responsemap, scales(Level), model, resizefactor);
-    save_confidence(conf_file, top, conf);
-%     test_get_confidence(imread(filename), conf, top(top(:, end) > 0, :))
-% 	try
-% 		[ top, conf ] = lsvmConfidenceMap(filename, model, 0, -8);
-% 		save_confidence(conf_file, top, conf)
-% 	catch
-% 	end
 end
 matlabpool close
 
@@ -68,7 +75,7 @@ padx = ceil(model.maxsize(2)/2+1);
 pady = ceil(model.maxsize(1)/2+1);
 for i = 1:length(responsemap)
     type = mod(i - 1, length(model.rootfilters)) + 1;
-    sid = floor((i - 1) / 2) + 1;
+    sid = floor((i - 1) / length(model.rootfilters)) + 1;
     
     sz =  step .* model.rootfilters{type}.size;
     
@@ -88,6 +95,10 @@ end
 function [top] = reformDetections(bbox, resizefactor)
 
 bbox = nms(bbox, 0.5);
+if(size(bbox, 1) == 0)
+    top = zeros(0, 6);
+    return;
+end
 
 top = bbox(:, [1:4, end - 1, end]);
 

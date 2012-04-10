@@ -3,8 +3,8 @@ if ischar(idx)
 	idx = str2num(idx);
 end
 
-imgdir = '/nobackup/wgchoi/ToyotaData/left_images';
-outdir = '/nobackup/wgchoi/ToyotaData/vpvotes';
+imgdir = '~/ToyotaData/left_images';
+outdir = '~/ToyotaData/vpvotes';
 if ~exist(outdir, 'dir')
 	mkdir(outdir);
 end
@@ -35,8 +35,8 @@ for i = list % 1:length(imfiles)
 					(lines(:, 5) <= -mina & lines(:, 5) >= (mina - pi)) );
 		vote = heuristic_vote(lines(lidx, :), [imsz(2), imsz(1)], vstep);
 
-		save(fullfile(outdir, ['votemap' num2str(i, '%06d') '.mat']) , 'vote', 'lines', 'lidx', 'imsz', 'resizefactor', 'vstep', ...
-																'imgdir', 'imfile');
+% 		save(fullfile(outdir, ['votemap' num2str(i, '%06d') '.mat']) , 'vote', 'lines', 'lidx', 'imsz', 'resizefactor', 'vstep', ...
+% 																'imgdir', 'imfile');
 		disp(['done ' imfile]);
 	catch ee
 		ee
