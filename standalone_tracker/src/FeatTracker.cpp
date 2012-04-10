@@ -28,7 +28,7 @@ FeatTracker::~FeatTracker()
 void FeatTracker::setVideoFile(const std::string &video_file)
 {
 	if(!video_.isOpened()) {
-		int frame_rate = 25;
+		int frame_rate = 2;
 		if(!video_.open(video_file, CV_FOURCC('X','V','I','D'), frame_rate, cv::Size(640 , 480), true))
 		assert(video_.isOpened());
 	}
@@ -139,11 +139,11 @@ bool KeyPointResponseCompare(cv::KeyPoint a, cv::KeyPoint b)
 	return (a.response > b.response); 
 }
 
-#define MARGIN	0.1
+#define MARGIN	0.15
 bool FeatTracker::isValidGroundFeature(cv::Point2f pt)
 {
 	bool ret = (pt.x > current_image_.cols * MARGIN) && (pt.x < current_image_.cols * (1 - MARGIN));
-	ret = ret && (pt.y > current_image_.rows * .0 ) && (pt.y < current_image_.rows * (1 - MARGIN));
+	ret = ret && (pt.y > current_image_.rows * .0 ) && (pt.y < current_image_.rows * 0.7);
 	return ret;
 }
 
@@ -167,7 +167,7 @@ void FeatTracker::processTracking()
 	gettimeofday(&timeofday,NULL); rt0 = timeofday.tv_sec + 1e-6 * timeofday.tv_usec;
 	// track existing features!!
 	if(pts.size() > 0) {
-		cv::calcOpticalFlowPyrLK(prev_image_, current_image_, pts, npts, status, err); // , cv::Size(10, 10), 1);
+		cv::calcOpticalFlowPyrLK(prev_image_, current_image_, pts, npts, status, err, cv::Size(current_image_.cols / 50, current_image_.cols / 50), 3);
 		
 		assert(pts.size() == npts.size());
 		assert(pts.size() == status.size());

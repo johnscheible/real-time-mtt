@@ -1484,6 +1484,8 @@ void PriorDistCameraEstimate::computeNewCameraPrior(const SampleInfo &info)
 			+ log_gaussian_prob(state->getYaw(), prev_state->getYaw(), camera_motion_sigma_yaw_ * dt)
 			+ log_gaussian_prob(state->getHorizon(), prev_state->getHorizon(), camera_motion_sigma_horizon_ * dt)
 			+ log_gaussian_prob(state->getV(), prev_state->getV(), camera_motion_sigma_v_ * dt);
+		// avoid negative velocity
+		if(state->getV() < 0) new_camera_prior_cache_.at<double>(i, 0) -= 100;
 #if 0	
 		std::cout	
 			<< "x std " << camera_motion_sigma_x_ * dt

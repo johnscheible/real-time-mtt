@@ -814,7 +814,7 @@ int main (int ac, char** av)
 	ObservationManager 	*mgr = createManager();
 	RJMCMCTracker 		tracker;
 	FeatTracker			feat_tracker;
-
+	// feat_tracker.setVideoFile("/home/wgchoi/feat_tracker.avi");
 	double timesec;
 	// set parameters
 	mgr->setParameters("min_height", boost::lexical_cast<std::string>(params.min_height));
@@ -1046,14 +1046,17 @@ int main (int ac, char** av)
 			video_samples << frame;
 		}
 #if 1
+		if(i % 50 == 0) {
+			target_manager.saveAll(params.out_dir);
+		}
 #else
 		cv::waitKey();
 #endif
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 	}
-	assert(im_files.size() == conf_files.size());
-
 	target_manager.saveAll(params.out_dir);
+
+	assert(im_files.size() == conf_files.size());
 
 	delete mgr;
 }

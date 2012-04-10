@@ -16,6 +16,8 @@ void DetectionReadinConfidence::showMap()
 	std::cout << " size_ " << size_ ;
 	std::cout << " size_ratio_ " << size_ratio_ ;
 	std::cout << " step_ " << step_ ;
+	std::cout << " minx_ " << minx_ ;
+	std::cout << " miny_ " << miny_ ;
 	std::cout << std::endl;
 
 	float minval = -3.0; 	
@@ -48,7 +50,7 @@ DetectionReadinNode::DetectionReadinNode()
 	det_std_h_ = 0.1;
 	//
 	obj_type_ = g_objtype; // ObjPerson;
-	if(obj_type_ == ObjPerson)		pos_threshold_ = 1.0;
+	if(obj_type_ == ObjPerson)		pos_threshold_ = 0.0;
 	else if(obj_type_ == ObjCar)	pos_threshold_ = -.7;
 	else							assert(0);
 
@@ -200,7 +202,7 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 		assert(nread == 6);
 #ifdef USE_DET_RESPONSE
 		if( det[4] > pos_threshold_ ) {
-			responses_.push_back(max((double)det[4], 0.0));
+			responses_.push_back(max((double)det[4] - pos_threshold_, 0.0));
 			// responses_.push_back(det[4] + 0.5);
 #else
 		if( det[4] > .5 ) {
@@ -316,9 +318,9 @@ double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 	overlap = getMinDist2Dets(found_, idx, rt, det_std_x_, det_std_y_, det_std_h_);
 	if(overlap < 4.0) { // within range
 		if(obj_type_ == ObjPerson)
-			overlap = (4.0 - overlap) * responses_[idx] / 2;
+			overlap = (4.0 - overlap) * responses_[idx];
 		else if(obj_type_ == ObjCar)
-			overlap = (4.0 - overlap) * responses_[idx] * 2.0;
+			overlap = (4.0 - overlap) * responses_[idx];
 	}
 	else { // too far
 		overlap = 0.0;
@@ -334,16 +336,27 @@ double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 		if( abs(confidences_[i].size_ratio_ - whratio) < 0.1 * whratio
 			&& rt.height >= (confidences_[i].size_ * (1 + 1 / det_scale_) / 2) 
 			&& rt.height <= (confidences_[i].size_ * (1 + det_scale_) / 2)) {
-			assert(i % 2 == 1);
+			if(obj_type_ == ObjCar) assert(i % 2 == 1); // not ready!
 			int x = floor((pt.x - confidences_[i].minx_) / confidences_[i].step_);
 			int y = floor((pt.y - confidences_[i].miny_) / confidences_[i].step_);
 			// check whether point is in image
 			if((x < 0) || (y < 0) || (x > confidences_[i].map_.cols) || (y > confidences_[i].map_.rows)) {
 				return (overlap + obs_out_of_image) * weight_;
 			}
-#if 0			
+#if 0		
+			std::cout << "(" << pt.x << " - " << confidences_[i].minx_ << ") / " << confidences_[i].step_ << std::endl;
+			std::cout << "x : " << x << " y : " << y << std::endl;
+
 			std::cout << " " << weight_ << " " << confidences_[i].map_.at<float>(y, x) << " " << overlap << " ";
 			std::cout << "conf : " << (overlap + confidences_[i].map_.at<float>(y, x)) * weight_ << " ";
+
+			for(int ii = -5; ii < 5; ii++) {
+				for(int jj = -5; jj < 5; jj++) {
+					std::cout << confidences_[i].map_.at<float>(y + ii, x + jj) << " ";
+				}
+				std::cout << std::endl;
+			}
+
 			cv::Rect rtt = rt;
 			print_rect(rtt);
 			std::cout << "idx " << i;

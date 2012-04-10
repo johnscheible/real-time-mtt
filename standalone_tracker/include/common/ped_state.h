@@ -12,7 +12,7 @@
 // #include <LinearMath/btTransform.h>
 
 #define NUM_PERSON_SUBTYPE 		1
-#define WH_PERSON_RATIO			2.3
+#define WH_PERSON_RATIO			3
 #define MEAN_PERSON_HEIGHT 		1.7
 #define STD_PERSON_HEIGHT		0.1
 

@@ -258,7 +258,6 @@ MCMCSamplePtr RJMCMCTracker::getInitSample(double timesec)
 	ret->setGFeatStates(feats, validities);
 	//////////////////////////////////////////////////////////////////////
 #endif
-
 	// std::cout << "initial sample information : " << std::endl;
 	// ret->print();
 	//////////////////////////////////////////////////////////////////////
@@ -501,39 +500,6 @@ CamStatePtr RJMCMCTracker::initializeCamera()
 	CamStatePtr prev_cam = prev_dist_->getMeanCamera();
 	double 		timesec = obs_wrapper_.getTimeSec();
 	CamStatePtr cur_cam = prev_cam->predict(timesec);
-#if 0
-	// find horizon by detection votes
-	std::vector<int> votes;
-	std::vector<double> std;
-	obs_wrapper_.getManager()->getHorizonVotes(votes, std, prev_cam->getY());
-	
-	int vote = 0;
-	std::vector<int> inliers;
-	std::vector<int> max_inliers;
-
-	for(size_t i = 0; i < votes.size(); i++) {
-		vote = votes[i];
-		inliers.clear();
-
-		for(size_t j = 0; j < votes.size(); j++) {
-			if(abs(vote - votes[j]) < 3 * std[j]) {
-				inliers.push_back(j);
-			}
-		}
-		if(max_inliers.size() < inliers.size()) {
-			max_inliers = inliers;
-		}
-	}
-
-	double mean_hor = 0;
-	for(size_t i = 0; i < max_inliers.size(); i++) {
-		mean_hor += (double)votes[max_inliers[i]] / max_inliers.size();
-	}
-
-	if(mean_hor != 0) {
-		cur_cam->setHorizon(mean_hor);
-	}
-#else
 	// find initial horizon by vp votes
 	CamStatePtr temp = cur_cam->clone();
 	double max_conf = 0;
@@ -547,234 +513,72 @@ CamStatePtr RJMCMCTracker::initializeCamera()
 			cur_cam->setHorizon(i);
 			max_conf = tval;
 		}
-		// std::cout << setprecision(6) << "hor : " << i << " val : " << tval << std::endl;
-		// for(int j = 0; j < 50; j++)
-		//	timage.at<unsigned char>(j, cnt) = floor(min(255.0, tval / 10));
-		// cnt++;
 	}
-	//cv::imshow("temptemp", timage);
-	//cv::waitKey();
 	std::cout << "**** initial horizon : " << cur_cam->getHorizon() << std::endl;
-#endif
+	
+	// estimate x,z,yaw
 	// find yaw/x/z/vx by few sampling - hold features, targets fixed
-#if 0
-	double lkhood = 0;
-	MCMCSamplePtr				one_sample = boost::make_shared<MCMCSample>(MCMCSample());
-
-	RJMCMCProposal 				prop_dist(prev_dist_, timesec);
-	PriorDistCameraEstimate		motion_prior(prev_dist_, timesec);
-
-	MeanShiftWrapper			ms_wrapper;
-	ms_wrapper.setData(ms_rts_, ms_sims_);
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	motion_prior.setParameters("MotionSigmaX", boost::lexical_cast<std::string>(motion_sigma_x_));
-	motion_prior.setParameters("MotionSigmaY", boost::lexical_cast<std::string>(motion_sigma_y_));
-	motion_prior.setParameters("MotionSigmaZ", boost::lexical_cast<std::string>(motion_sigma_z_));
-#ifdef VEL_STATE
-	motion_prior.setParameters("MotionSigmaVX", boost::lexical_cast<std::string>(motion_sigma_vx_));
-	motion_prior.setParameters("MotionSigmaVZ", boost::lexical_cast<std::string>(motion_sigma_vz_));
-#endif
-	motion_prior.setParameters("ProbEnter", boost::lexical_cast<std::string>(prob_enter_));
-	motion_prior.setParameters("ProbStay", boost::lexical_cast<std::string>(prob_stay_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	motion_prior.setParameters("CameraMotionSigmaX", boost::lexical_cast<std::string>(motion_cam_sigma_x_));
-	motion_prior.setParameters("CameraMotionSigmaZ", boost::lexical_cast<std::string>(motion_cam_sigma_z_));
-	motion_prior.setParameters("CameraMotionSigmaYaw", boost::lexical_cast<std::string>(motion_cam_sigma_yaw_));
-	motion_prior.setParameters("CameraMotionSigmaV", boost::lexical_cast<std::string>(motion_cam_sigma_v_));
-	motion_prior.setParameters("CameraMotionSigmaHorizon", boost::lexical_cast<std::string>(motion_cam_sigma_horizon_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	motion_prior.setParameters("ProbFeatEnter", boost::lexical_cast<std::string>(prob_feat_enter_));
-	motion_prior.setParameters("ProbFeatStay", boost::lexical_cast<std::string>(prob_feat_stay_));
-	motion_prior.setParameters("InteractionOn", boost::lexical_cast<std::string>(interaction_on_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	prop_dist.setParameters("ProbMoveAdd", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveDelete", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveStay", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveLeave", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveUpdate", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveInteractionFlip", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveFeatStay", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveFeatLeave", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveFeatUpdate", boost::lexical_cast<std::string>(0.0));
-	prop_dist.setParameters("ProbMoveCamUpdate", boost::lexical_cast<std::string>(1.0));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	prop_dist.setParameters("DetectionSigmaX", boost::lexical_cast<std::string>(detection_sigma_x_));
-	prop_dist.setParameters("DetectionSigmaY", boost::lexical_cast<std::string>(detection_sigma_y_));
-	prop_dist.setParameters("DetectionSigmaH", boost::lexical_cast<std::string>(detection_sigma_h_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	prop_dist.setParameters("PerturbCamSigmaX", boost::lexical_cast<std::string>(perturb_cam_x_));
-	prop_dist.setParameters("PerturbCamSigmaZ", boost::lexical_cast<std::string>(perturb_cam_z_));
-	prop_dist.setParameters("PerturbCamSigmaYaw", boost::lexical_cast<std::string>(perturb_cam_yaw_));
-	prop_dist.setParameters("PerturbCamSigmaV", boost::lexical_cast<std::string>(perturb_cam_v_));
-	prop_dist.setParameters("PerturbCamSigmaHorizon", boost::lexical_cast<std::string>(perturb_cam_horizon_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	prop_dist.setParameters("PerturbFeatSigmaX", boost::lexical_cast<std::string>(perturb_feat_x_));
-	prop_dist.setParameters("PerturbFeatSigmaZ", boost::lexical_cast<std::string>(perturb_feat_z_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	prop_dist.setParameters("PerturbSigmaX", boost::lexical_cast<std::string>(perturb_x_));
-	prop_dist.setParameters("PerturbSigmaY", boost::lexical_cast<std::string>(perturb_y_));
-	prop_dist.setParameters("PerturbSigmaZ", boost::lexical_cast<std::string>(perturb_z_));
-#ifdef VEL_STATE
-	prop_dist.setParameters("PerturbSigmaVX", boost::lexical_cast<std::string>(perturb_vx_));
-	prop_dist.setParameters("PerturbSigmaVZ", boost::lexical_cast<std::string>(perturb_vz_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-	prop_dist.setParameters("MotionSigmaX", boost::lexical_cast<std::string>(motion_sigma_x_));
-	prop_dist.setParameters("MotionSigmaY", boost::lexical_cast<std::string>(motion_sigma_y_));
-	prop_dist.setParameters("MotionSigmaZ", boost::lexical_cast<std::string>(motion_sigma_z_));
-	prop_dist.setParameters("MotionSigmaVX", boost::lexical_cast<std::string>(motion_sigma_vx_));
-	prop_dist.setParameters("MotionSigmaVZ", boost::lexical_cast<std::string>(motion_sigma_vz_));
-	/////////////////////////////////////////////////////////////////////////////////////////////////
-#endif
-#ifdef VEL_STATE
-	motion_prior.initMotionParameters();
-#endif
-	one_sample->setCamState(cur_cam);
-	//////////////////////////////////////////////////////////////////////
-	// initialize targets
-	//////////////////////////////////////////////////////////////////////
-	std::vector<PeopleStatePtr> states;
-	std::vector<bool> exists;
-	std::vector<TargetDistPtr> targets = prev_dist_->getTargetDists();
-	for(unsigned int i = 0; i < proposals_.size(); i++) {
-		PeopleStatePtr state;
-		if(i < targets.size()) {
-			assert(i < targets.size());
-			state = targets[i]->getMean()->clone();
-#ifdef VEL_STATE
-			state = state->predict(timesec);
-
-			state->setVX(state->getVX() / 2);
-			state->setVY(0.0);
-			state->setVZ(state->getVZ() / 2);
-#endif
-			state->setTS(timesec);
-
-			states.push_back(state);
-			exists.push_back(true);
-		}
-		else {
-			state = boost::make_shared<PeopleState>(PeopleState());
-			states.push_back(state);
-			exists.push_back(false);
-		}
+	temp = cur_cam->clone();
+	std::vector<GFeatStatePtr> mfeats;
+	for(int i = 0; i < prev_dist_->getNumFeats(); i++) {
+		mfeats.push_back(prev_dist_->getMeanFeature(i));
 	}
-	one_sample->setStates(states, exists);
-	//////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////
-	// initialize interaction
-	//////////////////////////////////////////////////////////////////////
-	std::vector< std::vector<bool> > group_interaction;
-	for(unsigned int i = 0; i < proposals_.size(); i++) {
-		std::vector<bool> one_col;
-		for(unsigned int j = 0; j < i; j++) {
-			one_col.push_back(false); // by default no group interaction
+
+	double minval = cur_cam->getYaw() - (5.0 / 180.0 * M_PI);
+	double maxval = cur_cam->getYaw() + (5.0 / 180.0 * M_PI);
+	double dval = (0.1 / 180.0 * M_PI);
+	max_conf = -1e50;
+	double val = minval;
+	while(val <= maxval) {
+		// double yaw = minyaw; yaw < maxyaw; yaw += dyaw) {
+		double tval = 0.0f;
+		temp->setYaw(val);
+		for(int i = 0; i < mfeats.size(); i++) {
+			tval += mgr->getGFeatConfidence(mfeats[i], i, temp, "");
 		}
-		group_interaction.push_back(one_col);
+
+		if(max_conf < tval) {
+			max_conf = tval;
+			cur_cam->setYaw(val);
+		}
+		val += dval;
 	}
-	one_sample->setInteractionMode(group_interaction);
-	//////////////////////////////////////////////////////////////////////
-	// set initial features
-	//////////////////////////////////////////////////////////////////////
-	std::vector<GFeatStatePtr> feats;
-	std::vector<bool> validities;
-	for(size_t i = 0; i < feat_idx_.size(); i++) {
-		GFeatStatePtr fstate;
-		bool valid = false;
-		if(i < (size_t)prev_dist_->getNumFeats()) {
-			// from previous distribution
-			fstate = prev_dist_->drawFeatSample(i, timesec);
-			if(fstate.get())					valid = true;
-			else								valid = false;
+	std::cout << "**** initial dyaw : " << cur_cam->getYaw() - prev_cam->predict(timesec)->getYaw() << std::endl;
+
+	// find optimal initial velocity
+	minval = std::max(0.0, cur_cam->getV() - 5.0);
+	maxval = cur_cam->getV() + 5.0;
+	dval = 0.25;
+	val = minval;
+	max_conf = -1e50;
+	
+	double oldtimestamp = prev_cam->getTS();
+	temp = cur_cam->predict(oldtimestamp); // move back
+
+	while(val <= maxval) {
+		// double yaw = minyaw; yaw < maxyaw; yaw += dyaw) {
+		double tval = 0.0f;
+
+		temp->setV(val);
+		temp = temp->predict(timesec);
+		for(int i = 0; i < mfeats.size(); i++) {
+			tval += mgr->getGFeatConfidence(mfeats[i], i, temp, "");
 		}
-		else {
-			// new feature
-			fstate = boost::make_shared<GFeatState>(GFeatState());
-			valid = false;
+
+		if(max_conf < tval) {
+			max_conf = tval;
+
+			cur_cam->setV(temp->getV());
+			cur_cam->setX(temp->getX());
+			cur_cam->setZ(temp->getZ());
 		}
-		fstate->setTS(timesec);
-		feats.push_back(fstate);
-		validities.push_back(valid);
+
+		temp = temp->predict(oldtimestamp);
+		val += dval;
 	}
-	one_sample->setGFeatStates(feats, validities);
-	//////////////////////////////////////////////////////////////////////
+	prev_cam->predict(timesec)->print();
+	cur_cam->print();
 
-	// initialize caches..
-	obs_wrapper_.initCache(one_sample);
-	prop_dist.initCache(one_sample);
-	motion_prior.initCache(one_sample);
-	ms_wrapper.initCache(one_sample);
-
-	int counter = 0;
-	int num_samples = 500;
-
-	double maxl = 0;
-	MCMCSamplePtr	max_sample = one_sample;
-	SampleInfo info;
-
-	double 		ar, rval;
-	double 		obs_ar, prior_ar, q_ar, ms_ar;
-
-	int accepted = 0;
-	init_sampling_history();
-	while(++counter < num_samples) {
-		// generate new sample
-		info = prop_dist.drawNewSample(one_sample);
-		if(info.type_ == MoveNone) {
-			// counter--; // not valid sample.. ignore
-			continue;
-		}
-
-		if((info.type_ == MoveCamUpdate) && (prev_dist_->getMeanCamera().get() == NULL)) {
-			continue;
-		}
-		// preprocess caches
-		motion_prior.computeNewSampletMotionPrior(info);
-		obs_wrapper_.computeNewSampleObservationLkhood(info, one_sample);
-		ms_wrapper.computeNewSampleMSLkhood(info, one_sample);
-		// compute observation lkhood
-		obs_ar = obs_wrapper_.computeLogObservationLkhood(info, one_sample);
-		// compute motion prior
-		prior_ar = motion_prior.computeLogMotionPrior(info, one_sample);
-		// compute proposal ratio
-		q_ar = prop_dist.getProposalLogLkhood(one_sample, info);
-		// compute lkhood from MS
-		ms_ar = ms_wrapper.computeLogMSLkhood(info);
-		// evaluate acceptance ratio
-		ar = obs_ar + prior_ar + q_ar + ms_ar;
-
-		// std::cout << obs_ar << ":" << prior_ar << ":" << q_ar << ":" << ms_ar << std::endl;
-
-		rval = rng_.uniform((double)0.0, (double)1.0);
-		if(ar > log(rval)) {
-			// update sample..
-			one_sample = one_sample->setNewSample(info);
-			// update caches..
-			obs_wrapper_.updateCache(info, true);
-			prop_dist.updateCache(info, true);
-			motion_prior.updateCache(info, true);
-			ms_wrapper.updateCache(info, true);
-			// record sampling history
-			record_sampling_history(info, true);
-			accepted++;
-		}
-		else {
-			record_sampling_history(info, false);
-		}
-		
-		lkhood += ar;
-		if(maxl < lkhood) {
-			maxl = lkhood;
-			max_sample = one_sample;
-			// std::cout << "maxlkhood : " <<  maxl;
-			one_sample->getCamState()->print();
-		}
-	}
-	print_sampling_history();
-	// std::cout << "accepted! => " << accepted << std::endl;
-	cur_cam = one_sample->getCamState();
-#endif
 	return cur_cam;
 }
 
