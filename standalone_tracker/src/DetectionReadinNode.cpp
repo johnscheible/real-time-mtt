@@ -198,8 +198,17 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	nread = fread(&nums, sizeof(unsigned int), 1, fp);
 	assert(nread == 1);
 	for(size_t i = 0; i < nums; i++) {
+#if 0
 		nread = fread(det, sizeof(float), 6, fp);
 		assert(nread == 6);
+#else
+		// not compatible yet..
+		// std::cout << det[0] << " " << det[1] << " " << det[2] << " " << det[3] << " " << det[4] << " " << det[5] << std::endl;
+		nread = fread(det, sizeof(float), 5, fp);
+		det[5] = 1;
+		assert(nread == 5);
+#endif
+
 #ifdef USE_DET_RESPONSE
 		if( det[4] > pos_threshold_ ) {
 			responses_.push_back(max((double)det[4] - pos_threshold_, 0.0));
