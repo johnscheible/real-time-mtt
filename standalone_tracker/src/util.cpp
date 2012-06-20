@@ -5,13 +5,12 @@
 namespace people{
 	void show_image(cv::Mat &im, const std::string &name, int max_height)
 	{
-		cv::Size imsz(im.rows, im.cols);
+		cv::Size imsz(im.cols, im.rows);
 		cv::Mat resized;
 		if(max_height < imsz.height) {
 			double ratio = (double)max_height / (double)imsz.height;
 			imsz.height *= ratio;
 			imsz.width *= ratio;
-
 			cv::resize(im, resized, imsz);
 		}
 		else {

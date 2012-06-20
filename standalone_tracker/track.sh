@@ -22,7 +22,7 @@ CONFLIST=$ROOTDIR"$SEQNAME"_conflist.txt
 INIT_CAM="--init_cam_focal 500.0 --init_cam_x 0 --init_cam_y 1.0 --init_cam_z 0.0 --init_cam_v 1.0 --init_cam_yaw 0.0 --init_cam_horizon 215.0 --init_cam_xcenter 320"
 PARAMS="--outdir results/$SEQNAME.$POSTFIX\
 		--outvid results/$SEQNAME.$POSTFIX\
-		--showimg false\
+		--showimg true\
 		--prob_stay 0.8 --prob_enter 0.15\
 		--cam_motion_std_horizon 30 --cam_sample_std_horizon 10 --cam_motion_std_yaw 0.3 --cam_sample_std_yaw 0.05\
 		--feat_sample_std_x 0.2	--feat_sample_std_z 0.2\
