@@ -180,8 +180,17 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	char header[4];
 	nread = fread(header, sizeof(char), 4, fp);
 	assert(nread == 4);
-	if(!(header[0] == 'C'	&& header[1] == 'O'
+
+	int version = 0;
+	if((header[0] == 'C'	&& header[1] == 'O'
 		&& header[2] == 'N'	&& header[3] == 'F')) {
+		version = 1;
+	}
+	else if((header[0] == 'C'    && header[1] == 'O'
+		     && header[2] == 'N' && header[3] == '2')) {
+		version = 2;
+	}
+	else {
 		std::cout << "ERROR : invalid header format!" << std::endl;
 		fclose(fp);
 		return false;
@@ -192,22 +201,23 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	// changed the detection format!!!!!!!!!!!!!!!!!!!!!!!!
 	// it include x, y, w, h, th, subtype
 	float det[6];
-
 	assert(sizeof(unsigned int) == 4);
 
 	nread = fread(&nums, sizeof(unsigned int), 1, fp);
 	assert(nread == 1);
 	for(size_t i = 0; i < nums; i++) {
-#if 0
-		nread = fread(det, sizeof(float), 6, fp);
-		assert(nread == 6);
-#else
-		// not compatible yet..
-		// std::cout << det[0] << " " << det[1] << " " << det[2] << " " << det[3] << " " << det[4] << " " << det[5] << std::endl;
-		nread = fread(det, sizeof(float), 5, fp);
-		det[5] = 1;
-		assert(nread == 5);
-#endif
+		if(version == 1) {
+			nread = fread(det, sizeof(float), 5, fp);
+			det[5] = 1;
+			assert(nread == 5);
+		}
+		else if(version == 2) {
+			nread = fread(det, sizeof(float), 6, fp);
+			assert(nread == 6);
+		}
+		else {
+			assert(0);
+		}
 
 #ifdef USE_DET_RESPONSE
 		if( det[4] > pos_threshold_ ) {

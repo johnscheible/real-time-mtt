@@ -1,7 +1,7 @@
 function save_confidence(filename, top, conf)
 fp = fopen(filename, 'w');
 
-fwrite(fp,'CONF','char');
+fwrite(fp,'CON2','char');
 
 num_dets = size(top, 1);
 fwrite(fp, num_dets, 'uint');

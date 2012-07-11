@@ -108,7 +108,7 @@ void FeatTracker::get_features(double timestamp, std::vector<cv::Point2f> &pts, 
 std::vector<cv::KeyPoint> FeatTracker::detect_features(cv::Mat &image)
 {
 	std::vector<cv::KeyPoint> key_points;
-#if 0
+#if 1
 	if(detector_type_ == "SURF") {
 		cv::SurfFeatureDetector det(25);
 		det.detect(image, key_points);
