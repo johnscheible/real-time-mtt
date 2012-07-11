@@ -4,6 +4,8 @@
 
 Compile
 * Require opencv and boost library to be installed
+ - sudo apt-get install libboost-dev or see http://www.boost.org/
+ - refer to http://opencv.willowgarage.com/wiki/InstallGuide
 1. move into the standalone_tracker directory : cd standalone_tracker
 2. cmake .
 3. make
