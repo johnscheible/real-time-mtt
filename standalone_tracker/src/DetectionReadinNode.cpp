@@ -197,9 +197,6 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	}
 
 	unsigned int nums;
-	// IMPROTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// changed the detection format!!!!!!!!!!!!!!!!!!!!!!!!
-	// it include x, y, w, h, th, subtype
 	float det[6];
 	assert(sizeof(unsigned int) == 4);
 
@@ -207,11 +204,15 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	assert(nread == 1);
 	for(size_t i = 0; i < nums; i++) {
 		if(version == 1) {
+			// it include x, y, w, h, th
 			nread = fread(det, sizeof(float), 5, fp);
 			det[5] = 1;
 			assert(nread == 5);
 		}
 		else if(version == 2) {
+			// IMPROTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// changed the detection format!!!!!!!!!!!!!!!!!!!!!!!!
+			// it include x, y, w, h, th, subtype
 			nread = fread(det, sizeof(float), 6, fp);
 			assert(nread == 6);
 		}
