@@ -5,6 +5,7 @@
 #include <string>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include <opencv2/nonfree/nonfree.hpp>
 
 namespace people {
 	void draw_key_points(cv::Mat &img, std::vector<cv::KeyPoint> &points);
