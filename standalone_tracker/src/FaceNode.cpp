@@ -66,6 +66,24 @@ void FaceNode::preprocess()
 		(*it).x = cx - (*it).width / 2;
 		(*it).y -= (*it).height / 10;
 	}
+#if 0
+	if(found_.size() > 0) {
+		std::cout << "Face detected!! " << found_.size() << std::endl;
+		cv::Mat img = img_mono_.clone();
+
+		int i;
+		for(i = 0; i < found_.size(); i++) {
+			cv::rectangle(img, found_[i].tl(), found_[i].br(), cv::Scalar(255, 255, 255), 2);
+			cv::rectangle(img, org_found_[i].tl(), org_found_[i].br(), cv::Scalar(55, 55, 55), 4);
+		}
+
+		show_image(img, "faces", 600);
+		cv::waitKey();
+	}
+	else {
+		std::cout << "No face detected!!" << std::endl;
+	}
+#endif
 }
 
 void FaceNode::quaryData(const std::string &name, void *data)

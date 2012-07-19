@@ -5,6 +5,7 @@
 #include <observation/ObservationNode.h>
 #include <observation/DetectionReadinNode.h>
 #include <observation/FaceNode.h>
+#include <observation/SkinNode.h>
 #include <observation/ObservationManager.h>
 // tracker
 #include <tracker/rjmcmc_tracker.h>
@@ -529,9 +530,10 @@ ObservationManager *createManager()
 	node = new DetectionReadinNode;
 	mgr->insertObservationNode(node);
 #if 0
-	if(det_use_face_) {
+	if(true) {
 		node = new FaceNode;
 		mgr->insertObservationNode(node);
+		node->setParameter("face_model_file", "model/haarcascade_frontalface_alt.xml");
 	}
 #endif
 	return mgr;
@@ -914,7 +916,10 @@ int main (int ac, char** av)
 		std::cout << "process " << fname << std::endl;
 		cv::Mat image_color = cv::imread(fname);
 		cv::Mat image_mono; 
+		// cv::Mat image_hsv; 
 		cvtColor(image_color, image_mono, CV_BGR2GRAY);
+		// cvtColor(image_color, image_hsv, CV_BGR2HSV);
+		// mgr->setData((void*)&image_hsv, "image_hsv");
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		// set data
 		/////////////////////////////////////////////////////////////////////////////////////////////////
