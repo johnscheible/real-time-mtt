@@ -1,0 +1,25 @@
+Multiple Object Tracker
+
+This project implements a Multi Target Tracker in C++, described in the 
+following paper by Wongun Choi, Caroline Pantofaru and Silvio Savarese :
+
+W. Choi and S. Savarese, "Multiple Target Tracking in 
+ World Coordinate with Single, Minimally Calibrated Camera", ECCV 2010
+
+W. Choi, C. Pantofaru, S. Savarese, "Detecting and Tracking People using 
+ an RGB-D Camera via Multiple Detector Fusion", 
+ Workshop on Challenges and Opportunities in Robot Perception (in conjunction with ICCV-11).
+
+The project has the following dependencies:
+
+Boost	REQUIRED (for memory management and argument parsing)
+OpenCV  REQUIRED (for image processing)
+CMake   REQUIRED (for building)
+
+To configure the project, set the options at the top of CMakeLists.txt
+To build the project, follow the normal cmake routine from the root folder:
+
+>> cmake .
+>> make
+
+This package is developed and maintained by Wongun Choi (wgchoi@gmail.com)
