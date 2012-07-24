@@ -99,6 +99,8 @@ namespace people {
 		
 		cv::Size imsize_;
 		double pos_threshold_;
+
+		int version_;
 	};
 }; // Namespace
 

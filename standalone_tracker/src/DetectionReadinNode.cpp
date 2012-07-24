@@ -82,7 +82,7 @@ DetectionReadinNode::DetectionReadinNode()
 	//
 	obj_type_ = g_objtype; // ObjPerson;
 	if(obj_type_ == ObjPerson)		pos_threshold_ = 0.0;
-	else if(obj_type_ == ObjCar)	pos_threshold_ = -.5;
+	else if(obj_type_ == ObjCar)	pos_threshold_ = -0.75;
 	else							assert(0);
 
 	init();
@@ -212,14 +212,18 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	nread = fread(header, sizeof(char), 4, fp);
 	assert(nread == 4);
 
-	int version = 0;
+	// int version = 0;
 	if((header[0] == 'C'	&& header[1] == 'O'
 		&& header[2] == 'N'	&& header[3] == 'F')) {
-		version = 1;
+		version_ = 1;
 	}
 	else if((header[0] == 'C'    && header[1] == 'O'
 		     && header[2] == 'N' && header[3] == '2')) {
-		version = 2;
+		version_ = 2;
+	}
+	else if((header[0] == 'C'    && header[1] == 'O'
+		     && header[2] == 'N' && header[3] == '3')) {
+		version_ = 3;
 	}
 	else {
 		std::cout << "ERROR : invalid header format!" << std::endl;
@@ -234,13 +238,13 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 	nread = fread(&nums, sizeof(unsigned int), 1, fp);
 	assert(nread == 1);
 	for(size_t i = 0; i < nums; i++) {
-		if(version == 1) {
+		if(version_ == 1) {
 			// it include x, y, w, h, th
 			nread = fread(det, sizeof(float), 5, fp);
 			det[5] = 1;
 			assert(nread == 5);
 		}
-		else if(version == 2) {
+		else if(version_ == 2 || version_ == 3) {
 			// IMPROTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			// changed the detection format!!!!!!!!!!!!!!!!!!!!!!!!
 			// it include x, y, w, h, th, subtype
@@ -259,22 +263,25 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 		if( det[4] > .5 ) {
 #endif
 			cv::Rect rt(det[0], det[1], det[2], det[3]); 
-			
-			if(obj_type_ == ObjPerson) {
-				rt.width = rt.height / WH_PERSON_RATIO;
+
+			if(version_ < 3){ 
+				if(obj_type_ == ObjPerson) {
+					rt.width = rt.height / WH_PERSON_RATIO;
+				}
+				else if(obj_type_ == ObjCar) {
+					if(det[5] == 1) {
+						rt.width = rt.height / WH_CAR_RATIO1;
+					}
+					else if(det[5] == 2) {
+						rt.width = rt.height / WH_CAR_RATIO0;
+					}
+					else {
+						// only two type defined now..
+						assert(0);
+					}
+				}
 			}
-			else if(obj_type_ == ObjCar) {
-				if(det[5] == 1) {
-					rt.width = rt.height / WH_CAR_RATIO1;
-				}
-				else if(det[5] == 2) {
-					rt.width = rt.height / WH_CAR_RATIO0;
-				}
-				else {
-					// only two type defined now..
-					assert(0);
-				}
-			}
+
 			// trick to use nms in opencv
 			found_.push_back(rt);
 			// found_.push_back(rt);
@@ -381,43 +388,79 @@ double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 #endif
 	// overlap = getDist2AllDets(found_, rt, det_std_x_, det_std_y_, det_std_h_, 4.0) * 1 / 2;
 	// overlap = getOverlap2AllDets(found_, rt, 0.4) * 2 / 0.6;
-	cv::Point pt(rt.x, rt.y);
-	double whratio = (double)rt.width / (double)rt.height;
-	for(size_t i = 0; i < confidences_.size(); i++) {
-		if( abs(confidences_[i].size_ratio_ - whratio) < 0.1 * whratio
-			&& rt.height >= (confidences_[i].size_ * (1 + 1 / det_scale_) / 2) 
-			&& rt.height <= (confidences_[i].size_ * (1 + det_scale_) / 2)) {
-			if(obj_type_ == ObjCar) assert(i % 2 == 1); // not ready!
-			int x = floor((pt.x - confidences_[i].minx_) / confidences_[i].step_);
-			int y = floor((pt.y - confidences_[i].miny_) / confidences_[i].step_);
-			// check whether point is in image
-			if((x < 0) || (y < 0) || (x > confidences_[i].map_.cols) || (y > confidences_[i].map_.rows)) {
-				return (overlap + obs_out_of_image) * weight_;
-			}
-#if 0		
-			std::cout << "(" << pt.x << " - " << confidences_[i].minx_ << ") / " << confidences_[i].step_ << std::endl;
-			std::cout << "x : " << x << " y : " << y << std::endl;
+	if(version_ == 3) {
+		if(rt.height > 180) {
+			return -10.0;
+		}
 
-			std::cout << " " << weight_ << " " << confidences_[i].map_.at<float>(y, x) << " " << overlap << " ";
-			std::cout << "conf : " << (overlap + confidences_[i].map_.at<float>(y, x)) * weight_ << " ";
+		// reference point is at the feet
+		cv::Point pt(rt.x + rt.width / 2, rt.y + rt.height);
+		for(size_t i = 0; i < confidences_.size(); i++) {
+			if( rt.height >= (confidences_[i].size_ * (1 + 1 / det_scale_) / 2) 
+				&& rt.height <= (confidences_[i].size_ * (1 + det_scale_) / 2)) {
 
-			for(int ii = -5; ii < 5; ii++) {
-				for(int jj = -5; jj < 5; jj++) {
-					std::cout << confidences_[i].map_.at<float>(y + ii, x + jj) << " ";
+				int x = floor((pt.x - confidences_[i].minx_) / confidences_[i].step_);
+				int y = floor((pt.y - confidences_[i].miny_) / confidences_[i].step_);
+
+				// check whether point is in image
+				if((x < 0) || (y < 0) || (x > confidences_[i].map_.cols) || (y > confidences_[i].map_.rows)) {
+					return (overlap + obs_out_of_image) * weight_;
 				}
-				std::cout << std::endl;
-			}
+#if 0				
+				std::cout << x << " " 
+							<< y << " : "
+							<< pt.x << " "
+							<< pt.y << " size : " 
+							<< confidences_[i].size_ << " ov : " << overlap << " conf: " 
+							<< confidences_[i].map_.at<float>(y, x) << std::endl << std::endl;
 
-			cv::Rect rtt = rt;
-			print_rect(rtt);
-			std::cout << "idx " << i;
-			confidences_[i].showMap(); 
-			cv::waitKey();
+				cv::waitKey();
 #endif
-
-			return (overlap + confidences_[i].map_.at<float>(y, x)) * weight_;
+				return (overlap + confidences_[i].map_.at<float>(y, x)) * weight_;
+			}
 		}
 	}
+	else {
+		cv::Point pt(rt.x, rt.y);
+		double whratio = (double)rt.width / (double)rt.height;
+		for(size_t i = 0; i < confidences_.size(); i++) {
+			if( abs(confidences_[i].size_ratio_ - whratio) < 0.1 * whratio
+				&& rt.height >= (confidences_[i].size_ * (1 + 1 / det_scale_) / 2) 
+				&& rt.height <= (confidences_[i].size_ * (1 + det_scale_) / 2)) {
+
+				if(obj_type_ == ObjCar) assert(i % 2 == 1); // not ready!
+				int x = floor((pt.x - confidences_[i].minx_) / confidences_[i].step_);
+				int y = floor((pt.y - confidences_[i].miny_) / confidences_[i].step_);
+				// check whether point is in image
+				if((x < 0) || (y < 0) || (x > confidences_[i].map_.cols) || (y > confidences_[i].map_.rows)) {
+					return (overlap + obs_out_of_image) * weight_;
+				}
+#if 0		
+				std::cout << "(" << pt.x << " - " << confidences_[i].minx_ << ") / " << confidences_[i].step_ << std::endl;
+				std::cout << "x : " << x << " y : " << y << std::endl;
+
+				std::cout << " " << weight_ << " " << confidences_[i].map_.at<float>(y, x) << " " << overlap << " ";
+				std::cout << "conf : " << (overlap + confidences_[i].map_.at<float>(y, x)) * weight_ << " ";
+
+				for(int ii = -5; ii < 5; ii++) {
+					for(int jj = -5; jj < 5; jj++) {
+						std::cout << confidences_[i].map_.at<float>(y + ii, x + jj) << " ";
+					}
+					std::cout << std::endl;
+				}
+
+				cv::Rect rtt = rt;
+				print_rect(rtt);
+				std::cout << "idx " << i;
+				confidences_[i].showMap(); 
+				cv::waitKey();
+#endif
+
+				return (overlap + confidences_[i].map_.at<float>(y, x)) * weight_;
+			}
+		}
+	}
+
 	return (overlap + obs_out_of_image) * weight_;
 }
 }; // Namespace

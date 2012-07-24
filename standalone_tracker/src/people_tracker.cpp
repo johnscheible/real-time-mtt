@@ -830,16 +830,19 @@ int main (int ac, char** av)
 
 	double fps = params.fps;
 	if(params.out_vid != "") {
+		std::string imfname = params.root_dir + im_files[0];
+		cv::Mat image_color = cv::imread(imfname);
+
 		std::string fname = params.out_vid + "_target.avi";
-		if(!video_target.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(500 , 500), true))
+		if(!video_target.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(image_color.cols , image_color.rows), true))
 		my_assert(video_target.isOpened());
 
 		fname = params.out_vid + "_samples.avi";
-		if(!video_samples.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(500 , 500), true))
+		if(!video_samples.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(image_color.cols , image_color.rows), true))
 		my_assert(video_samples.isOpened());
 
 		fname = params.out_vid + "_feature.avi";
-		if(!video_feature.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(500 , 500), true))
+		if(!video_feature.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(image_color.cols , image_color.rows), true))
 		my_assert(video_feature.isOpened());
 	}
 	///////////////////////////////////////////////////////////////
