@@ -374,9 +374,11 @@ SampleInfo	RJMCMCProposal::stayTarget(MCMCSamplePtr sample)
 		state->setVY(0.0);
 		state->setVZ(prev_mean->getVZ());
 #endif
+		// std::cout << "det driven!" << std::endl;
 		state->setTS(timestamp_);
 	}
 	else {
+		// std::cout << "posterior driven!" << std::endl;
 		state = prev_dist_->drawObjectSample(ret.idx_, timestamp_);
 	}
 	ret.obj_state_ = state;
@@ -445,6 +447,9 @@ SampleInfo RJMCMCProposal::updateTarget(MCMCSamplePtr sample)
 	}
 	ret.idx_ = idx;
 	double dt = timestamp_ - prev_dist_->getTimeStamp();
+	if(dt == 0.0) {
+		dt = 1.0/20;
+	}
 	ret.obj_state_ = sample->getObjectState(ret.idx_)->perturbState(obj_pert_params_, dt);
 #if 0
 #ifdef VEL_STATE
@@ -507,6 +512,9 @@ SampleInfo RJMCMCProposal::updateCamera(MCMCSamplePtr sample)
 	SampleInfo ret;
 	ret.type_ = MoveCamUpdate;
 	double dt = timestamp_ - prev_dist_->getTimeStamp();
+	if(dt == 0.0) {
+		dt = 1.0/20;
+	}
 	ret.cam_state_ = sample->getCameraState()->perturbState(cam_pert_params_, dt);
 #if 0
 	// see updateTarget for reference

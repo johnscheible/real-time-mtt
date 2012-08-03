@@ -218,7 +218,7 @@ namespace people {
 			double dt = timesec - timesec_;
 			assert(dt >= 0);
 			for(size_t i = 0 ; i < 3; i++) { // x, y, z
-				ret->setElement(0, ret->getElement(i) + ret->getElement(i + 3) * dt);
+				ret->setElement(i, ret->getElement(i) + ret->getElement(i + 3) * dt);
 			}
 			// ret->setElement(0, x_ + vx_ * (timesec - timesec_));
 			// ret->setElement(1, y_ + vy_ * (timesec - timesec_));

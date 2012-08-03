@@ -753,8 +753,8 @@ void RJMCMCTracker::runMCMCSampling()
 		// evaluate acceptance ratio
 		ar = obs_ar + prior_ar + q_ar + ms_ar;
 #if 0
-		if(info.type_ == MoveAdd) {
-			std::cout << "Move : Add " << ar << " idx " << info.idx_ << std::endl;
+		if(info.type_ == MoveStay) {
+			std::cout << "Move : Update " << ar << " idx " << info.idx_ << std::endl;
 			std::cout << " obs : " << obs_ar 
 					<< " pr : " << prior_ar 
 					<< " q : " << q_ar 
@@ -768,77 +768,17 @@ void RJMCMCTracker::runMCMCSampling()
 			cv::waitKey();
 		}
 #endif
-#ifdef TESTING_CONF
-		if(info.type_ == MoveUpdate && info.idx_ < prev_dist_->getNumTargets() && info.idx_ == 2 && timesec >= 0.12) {
-			std::cout << "Move : Update " << ar << " idx " << info.idx_ << std::endl;
-			std::cout << "from : ";
-			one_sample->getState(info.idx_)->print();
-			std::cout << "to : ";
-			info.state_->print();
-			std::cout << " obs : " << obs_ar 
-					<< " pr : " << prior_ar 
-					<< " q : " << q_ar 
-					<< " ms : " << ms_ar << std::endl;
-
-			// draw sample
-			cv::Mat image = obs_wrapper_.getManager()->getImage().clone();
-			CameraStatePtr cam = one_sample->getCamState();
-			ObjectStatePtr old_state = one_sample->getState(info.idx_);
-			ObjectStatePtr new_state = info.state_;
-			
-			cv::Rect new_rt = cam->project(new_state);
-			cv::Rect old_rt = cam->project(old_state);
-			
-			cv::rectangle(image, old_rt.tl(), old_rt.br(), cv::Scalar(0, 0, 0), 2);
-			cv::rectangle(image, new_rt.tl(), new_rt.br(), cv::Scalar(255, 255, 255), 2);
-
-			cv::imshow("dbg_tracker", image);
-			cv::waitKey();
-		}
-#endif
 #if 0
-		if(info.type_ == MoveCamUpdate) {
-			std::cout << "Move : update " << ar << std::endl;
-			std::cout << "camera from : ";
-			one_sample->getCamState()->print();
-			std::cout << "camera to : ";
-			info.cam_state_->print();
-			std::cout << " obs : " << obs_ar 
-					<< " pr : " << prior_ar 
-					<< " q : " << q_ar 
-					<< " ms : " << ms_ar << std::endl;
-
-			cv::Mat image = obs_wrapper_.getManager()->getImage().clone();
-
-			cv::Mat camera_view(image, cv::Rect(20, 20, 40, 40));
-			camera_view = cv::Scalar(255, 255, 255);
-			cv::rectangle(camera_view, cv::Point(0,0), cv::Point(39, 39), cv::Scalar(0,0,0), 3);
-			// draw view point
-			double angle = info.cam_state_->getYaw();
-			double x = cos(angle), z = sin(angle);
-			cv::line(camera_view, cv::Point(19, 19), cv::Point(19 + 20 * x, 19 + 20 * z), cv::Scalar(0,0,255), 1);
-			angle = one_sample->getCamState()->getYaw();
-			x = cos(angle), z = sin(angle);
-			cv::line(camera_view, cv::Point(19, 19), cv::Point(19 + 20 * x, 19 + 20 * z), cv::Scalar(0,0,0), 1);
-
-			cv::line(image, cv::Point(0, one_sample->getCamState()->getHorizon()), cv::Point(1000, one_sample->getCamState()->getHorizon()), cv::Scalar(0, 0, 0));
-			cv::line(image, cv::Point(0, info.cam_state_->getHorizon()), cv::Point(1000, info.cam_state_->getHorizon()), cv::Scalar(0, 0, 255));
-			
-			cv::imshow("dbg_tracker", image);
-			cv::waitKey();
-		}
-#endif
-#if 0
-		if(info.type_ == MoveStay) {
+		if(info.type_ == MoveStay && info.idx_ == 7) {
 			std::cout << "Move : Stay " << ar << " idx " << info.idx_ << std::endl;
-			info.state_->print();
+			info.obj_state_->print();
 			std::cout << " obs : " << obs_ar 
 					<< " pr : " << prior_ar 
 					<< " q : " << q_ar 
 					<< " ms : " << ms_ar << std::endl;
 			cv::waitKey();
 		}
-		else if(info.type_ == MoveLeave) {
+		else if(info.type_ == MoveLeave  && info.idx_ == 7) {
 			std::cout << "Move : Leave " << ar << " idx " << info.idx_ << std::endl;
 			std::cout << " obs : " << obs_ar 
 					<< " pr : " << prior_ar 
