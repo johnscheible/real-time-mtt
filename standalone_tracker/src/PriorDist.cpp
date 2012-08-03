@@ -36,7 +36,7 @@
 
 using namespace people;
 
-#ifdef VEL_STATE
+#if 0 // def VEL_STATE
 void PriorDist::initMotionParameters()
 {
 	size_t nTargets = prev_dist_->getNumTargets();
@@ -54,7 +54,7 @@ void PriorDist::initMotionParameters()
 	motion_sigma_dets_.clear();
 
 	for(size_t i = 0; i < nTargets; i++) {
-		TargetDistPtr target = prev_dist_->getTarget(i);
+		TargetDistPtr target = prev_dist_->getTargetDist(i);
 		int frames = target->getFrames();
 		double vel_factor = get_vel_factor(frames);
 
@@ -76,7 +76,7 @@ void PriorDist::initMotionParameters()
 			print_dbg_file(msg);
 			
 			MCMCSamplePtr sample = prev_dist_->getSample(j);
-			PeopleStatePtr state = sample->getState(i);
+			ObjectStatePtr state = sample->getObjectState(i);
 			if(state.get() == NULL)
 				continue;
 
@@ -120,27 +120,18 @@ void PriorDist::initMotionParameters()
 
 void PriorDist::setParameters(const std::string &name, const std::string &value)
 {
-#ifdef VEL_STATE
-	if (name == "MotionSigmaVX")
-		motion_sigma_vx_ = boost::lexical_cast<double>(value);
-	else if (name == "MotionSigmaVY")
-		motion_sigma_vy_ = boost::lexical_cast<double>(value);
-	else if (name == "MotionSigmaVZ")
-		motion_sigma_vz_ = boost::lexical_cast<double>(value);
-	else if (name == "MotionSigmaX")
-		motion_sigma_x_ = boost::lexical_cast<double>(value);
-	else if (name == "MotionSigmaY")
-		motion_sigma_y_ = boost::lexical_cast<double>(value);
-	else if (name == "MotionSigmaZ")
-		motion_sigma_z_ = boost::lexical_cast<double>(value);
-#else
 	if (name == "MotionSigmaX")
-		motion_sigma_x_ = boost::lexical_cast<double>(value);
+		object_motion_params_[0] = boost::lexical_cast<double>(value);
 	else if (name == "MotionSigmaY")
-		motion_sigma_y_ = boost::lexical_cast<double>(value);
+		object_motion_params_[1] = boost::lexical_cast<double>(value);
 	else if (name == "MotionSigmaZ")
-		motion_sigma_z_ = boost::lexical_cast<double>(value);
-#endif
+		object_motion_params_[2] = boost::lexical_cast<double>(value);
+	else if (name == "MotionSigmaVX")
+		object_motion_params_[3] = boost::lexical_cast<double>(value);
+	else if (name == "MotionSigmaVY")
+		object_motion_params_[4] = boost::lexical_cast<double>(value);
+	else if (name == "MotionSigmaVZ")
+		object_motion_params_[5] = boost::lexical_cast<double>(value);
 	else if (name == "ProbStay")
 		prob_stay_ = boost::lexical_cast<double>(value);
 	else if (name == "ProbEnter")
@@ -151,9 +142,9 @@ void PriorDist::setParameters(const std::string &name, const std::string &value)
 
 void PriorDist::initCache(MCMCSamplePtr sample)
 {
-	motion_cache_ = cv::Mat(prev_dist_->getNumSamples(), sample->getNumTargets(), CV_64F);
+	motion_cache_ = cv::Mat(prev_dist_->getNumSamples(), sample->getNumObjects(), CV_64F);
 	// initialize cache
-	for(int i = 0; i < sample->getNumTargets(); i++)
+	for(int i = 0; i < sample->getNumObjects(); i++)
 	{
 		computeOneTargetMotionPrior(sample, i);
 		for(int j = 0; j < one_target_motion_cache_.rows; j++)  {
@@ -182,12 +173,12 @@ void PriorDist::computeNewSampletMotionPrior(const SampleInfo &info)
 		// existing target
 		if((info.type_ == MoveAdd) || (info.type_ == MoveStay) || (info.type_ == MoveUpdate)) {
 			// existing now
-			PeopleStatePtr state = info.state_;
+			ObjectStatePtr state = info.obj_state_;
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
 
-				if(prev_sample->getExistance(info.idx_)) {
-					PeopleStatePtr prev_state = prev_sample->getState(info.idx_);
+				if(prev_sample->getObjectExistance(info.idx_)) {
+					ObjectStatePtr prev_state = prev_sample->getObjectState(info.idx_);
 					// std::cout << "dt " << dt << "sigma_x " << motion_sigma_x_ << std::endl;
 					// stay
 #ifdef VEL_STATE
@@ -212,7 +203,7 @@ void PriorDist::computeNewSampletMotionPrior(const SampleInfo &info)
 			// not existing now
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-				if(prev_sample->getExistance(info.idx_)) {
+				if(prev_sample->getObjectExistance(info.idx_)) {
 					// left
 					one_target_motion_cache_.at<double>(i, 0) = 1 - prob_stay_;
 				}
@@ -248,15 +239,15 @@ void PriorDist::computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid)
 	// std::cout << "motion_prob : " ;
 	if(tid < prev_dist_->getNumTargets()) {
 		// existing target
-		if(sample->getExistance(tid)) {
+		if(sample->getObjectExistance(tid)) {
 			// existing now
-			PeopleStatePtr state = sample->getState(tid);
+			ObjectStatePtr state = sample->getObjectState(tid);
 
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
 
-				if(prev_sample->getExistance(tid)) {
-					PeopleStatePtr prev_state = prev_sample->getState(tid);
+				if(prev_sample->getObjectExistance(tid)) {
+					ObjectStatePtr prev_state = prev_sample->getObjectState(tid);
 					// std::cout << "dt " << dt << "sigma_x " << motion_sigma_x_ << std::endl;
 					// stay
 #ifdef VEL_STATE
@@ -280,7 +271,7 @@ void PriorDist::computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid)
 			// not existing now
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-				if(prev_sample->getExistance(tid)) {
+				if(prev_sample->getObjectExistance(tid)) {
 					// left
 					one_target_motion_cache_.at<double>(i, 0) = 1 - prob_stay_;
 				}
@@ -294,7 +285,7 @@ void PriorDist::computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid)
 	else {
 		// new target
 		for(int i = 0; i < num_samples; i++) {
-			if(sample->getExistance(tid)) {
+			if(sample->getObjectExistance(tid)) {
 				// new enter
 				one_target_motion_cache_.at<double>(i, 0) = prob_enter_;
 			}
@@ -355,6 +346,7 @@ double PriorDist::computeLogMotionPrior(const SampleInfo &info)
 #else
 #define PROB_ENTER_CONST	-50.0f
 #endif
+
 void PriorDistNS::computeNewSampletMotionPrior(const SampleInfo &info)
 {
 	int num_samples = prev_dist_->getNumSamples();
@@ -366,40 +358,13 @@ void PriorDistNS::computeNewSampletMotionPrior(const SampleInfo &info)
 		// existing target
 		if((info.type_ == MoveAdd) || (info.type_ == MoveStay) || (info.type_ == MoveUpdate)) {
 			// existing now
-			PeopleStatePtr state = info.state_;
+			ObjectStatePtr state = info.obj_state_;
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
 
-				if(prev_sample->getExistance(info.idx_)) {
-					PeopleStatePtr prev_state = prev_sample->getState(info.idx_);
-#ifdef VEL_STATE
-					cv::Mat x(5, 1, CV_64F);
-					cv::Mat m(5, 1, CV_64F);
-					// need to compare with current time prediction
-					double dt = timestamp_ - prev_state->getTS(); 
-					m.at<double>(0, 0) = prev_state->getX() + prev_state->getVX() * dt;	
-					m.at<double>(1, 0) = prev_state->getY() + prev_state->getVY() * dt;	
-					m.at<double>(2, 0) = prev_state->getZ() + prev_state->getVZ() * dt;
-					m.at<double>(3, 0) = prev_state->getVX();	
-					m.at<double>(4, 0) = prev_state->getVZ();
-
-					x.at<double>(0, 0) = state->getX();		
-					x.at<double>(1, 0) = state->getY();
-					x.at<double>(2, 0) = state->getZ();
-					x.at<double>(3, 0) = state->getVX();	
-					x.at<double>(4, 0) = state->getVZ();
-
-					one_target_motion_cache_.at<double>(i, 0) = 
-						log(prob_stay_) // stay prob
-					 	+ log_gaussian_prob(x, m, motion_sigma_invs_[info.idx_], motion_sigma_dets_[info.idx_]);
-#else
-					double dt = timestamp_ - prev_state->timesec_; 
-					one_target_motion_cache_.at<double>(i, 0) = 
-						log(prob_stay_) // stay prob
-					 	+ log_gaussian_prob(state->getX(), prev_state->getX(), motion_sigma_x_ * dt) // location prob
-					 	+ log_gaussian_prob(state->getY(), prev_state->getY(), motion_sigma_y_ * dt)
-					 	+ log_gaussian_prob(state->getZ(), prev_state->getZ(), motion_sigma_z_ * dt);
-#endif
+				if(prev_sample->getObjectExistance(info.idx_)) {
+					ObjectStatePtr prev_state = prev_sample->getObjectState(info.idx_);
+					one_target_motion_cache_.at<double>(i, 0) = log(prob_stay_) + prev_state->computeLogPrior(state, timestamp_, object_motion_params_);
 				}
 				else {
 					// new enter
@@ -411,7 +376,7 @@ void PriorDistNS::computeNewSampletMotionPrior(const SampleInfo &info)
 			// not existing now
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-				if(prev_sample->getExistance(info.idx_)) {
+				if(prev_sample->getObjectExistance(info.idx_)) {
 					// left
 					one_target_motion_cache_.at<double>(i, 0) = log(1 - prob_stay_);
 				}
@@ -447,43 +412,16 @@ void PriorDistNS::computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid)
 	// std::cout << "motion_prob : " ;
 	if(tid < prev_dist_->getNumTargets()) {
 		// existing target
-		if(sample->getExistance(tid)) {
+		if(sample->getObjectExistance(tid)) {
 			// existing now
-			PeopleStatePtr state = sample->getState(tid);
+			ObjectStatePtr state = sample->getObjectState(tid);
 
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
 
-				if(prev_sample->getExistance(tid)) {
-					PeopleStatePtr prev_state = prev_sample->getState(tid);
-#ifdef VEL_STATE
-					cv::Mat x(5, 1, CV_64F);
-					cv::Mat m(5, 1, CV_64F);
-					
-					double dt = timestamp_ - prev_state->getTS(); 
-					m.at<double>(0, 0) = prev_state->getX() + prev_state->getVX() * dt;	
-					m.at<double>(1, 0) = prev_state->getY() + prev_state->getVY() * dt;	
-					m.at<double>(2, 0) = prev_state->getZ() + prev_state->getVZ() * dt;
-					m.at<double>(3, 0) = prev_state->getVX();	
-					m.at<double>(4, 0) = prev_state->getVZ();	
-
-					x.at<double>(0, 0) = state->getX();		
-					x.at<double>(1, 0) = state->getY();
-					x.at<double>(2, 0) = state->getZ();
-					x.at<double>(3, 0) = state->getVX();	
-					x.at<double>(4, 0) = state->getVZ();
-
-					one_target_motion_cache_.at<double>(i, 0) = 
-						log(prob_stay_) // stay prob
-					 	+ log_gaussian_prob(x, m, motion_sigma_invs_[tid], motion_sigma_dets_[tid]);
-#else
-					double dt = timestamp_ - prev_state->timesec_;
-					one_target_motion_cache_.at<double>(i, 0) = 
-						log(prob_stay_) // stay prob
-					 	+ log_gaussian_prob(state->getX(), prev_state->getX(), motion_sigma_x_ * dt) // location prob
-					 	+ log_gaussian_prob(state->getY(), prev_state->getY(), motion_sigma_y_ * dt)
-					 	+ log_gaussian_prob(state->getZ(), prev_state->getZ(), motion_sigma_z_ * dt);
-#endif
+				if(prev_sample->getObjectExistance(tid)) {
+					ObjectStatePtr prev_state = prev_sample->getObjectState(tid);
+					one_target_motion_cache_.at<double>(i, 0) = log(prob_stay_) + prev_state->computeLogPrior(state, timestamp_, object_motion_params_);
 				}
 				else {
 					// new enter
@@ -495,7 +433,7 @@ void PriorDistNS::computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid)
 			// not existing now
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-				if(prev_sample->getExistance(tid)) {
+				if(prev_sample->getObjectExistance(tid)) {
 					// left
 					one_target_motion_cache_.at<double>(i, 0) = log(1 - prob_stay_);
 				}
@@ -509,7 +447,7 @@ void PriorDistNS::computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid)
 	else {
 		// new target
 		for(int i = 0; i < num_samples; i++) {
-			if(sample->getExistance(tid)) {
+			if(sample->getObjectExistance(tid)) {
 				// new enter
 				one_target_motion_cache_.at<double>(i, 0) = log(prob_enter_);
 			}
@@ -632,18 +570,18 @@ void PriorDist::print_all_cache(const SampleInfo &info, MCMCSamplePtr sample)
 	std::cout << std::endl;
 
 	std::cout << "New sample at : ";
-	info.state_->print();
+	info.obj_state_->print();
 
 	std::cout << "Old sample at : ";
 	if(sample.get()) {
-		PeopleStatePtr prev_state = sample->getState(info.idx_);
+		ObjectStatePtr prev_state = sample->getObjectState(info.idx_);
 		prev_state->print();
 	}
 
 	std::cout << "prior at : ";
 	std::vector<TargetDistPtr> targets = prev_dist_->getTargetDists();
 
-	std::vector<PeopleStatePtr> states = targets[info.idx_]->getStates();
+	std::vector<ObjectStatePtr> states = targets[info.idx_]->getStates();
 	for(size_t j = 0; j < states.size(); j++) 
 		states[j]->print();
 }
@@ -683,7 +621,7 @@ cv::Mat PriorDistInteract::computeAllTargetMotionPrior(const SampleInfo &info, M
 			case MoveStay: {
 				for(int i = 0; i < prev_dist_->getNumSamples(); i++) {
 					MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-					if(prev_sample->getExistance(info.idx_)) {
+					if(prev_sample->getObjectExistance(info.idx_)) {
 						ret.at<double>(i, 0) = log(prob_stay_);
 						ret.at<double>(i, 1) = log(1 - prob_stay_);
 					}
@@ -697,7 +635,7 @@ cv::Mat PriorDistInteract::computeAllTargetMotionPrior(const SampleInfo &info, M
 			case MoveLeave: {
 				for(int i = 0; i < prev_dist_->getNumSamples(); i++) {
 					MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-					if(prev_sample->getExistance(info.idx_)) {
+					if(prev_sample->getObjectExistance(info.idx_)) {
 						ret.at<double>(i, 0) = log(1 - prob_stay_);
 						ret.at<double>(i, 1) = log(prob_stay_);
 					}
@@ -795,8 +733,8 @@ cv::Mat PriorDistInteract::computeAllInteractionModePrior(const SampleInfo &info
 				for(int i = 0; i < prev_dist_->getNumSamples(); i++) {
 					double one_sample_prob = 0.0f;
 
-					for(int j = 0; j < sample->getNumTargets(); j++) {
-						for(int k = j + 1; k < sample->getNumTargets(); k++) {
+					for(int j = 0; j < sample->getNumObjects(); j++) {
+						for(int k = j + 1; k < sample->getNumObjects(); k++) {
 							int idx = getInteractionVariableIndex(j, k);
 
 							if( j == (int)info.idx_ && k == (int)info.idx2_) {
@@ -814,8 +752,8 @@ cv::Mat PriorDistInteract::computeAllInteractionModePrior(const SampleInfo &info
 				// old samples
 				for(int i = 0; i < prev_dist_->getNumSamples(); i++) {
 					double one_sample_prob = 0.0f;
-					for(int j = 0; j < sample->getNumTargets(); j++) {
-						for(int k = j + 1; k < sample->getNumTargets(); k++) {
+					for(int j = 0; j < sample->getNumObjects(); j++) {
+						for(int k = j + 1; k < sample->getNumObjects(); k++) {
 							int idx = getInteractionVariableIndex(j, k);
 							one_sample_prob += interaction_mode_cache_.at<double>(i, idx);
 						}
@@ -828,8 +766,8 @@ cv::Mat PriorDistInteract::computeAllInteractionModePrior(const SampleInfo &info
 				// old samples
 				for(int i = 0; i < prev_dist_->getNumSamples(); i++) {
 					double one_sample_prob = 0.0f;
-					for(int j = 0; j < sample->getNumTargets(); j++) {
-						for(int k = j + 1; k < sample->getNumTargets(); k++) {
+					for(int j = 0; j < sample->getNumObjects(); j++) {
+						for(int k = j + 1; k < sample->getNumObjects(); k++) {
 							int idx = getInteractionVariableIndex(j, k);
 							one_sample_prob += interaction_mode_cache_.at<double>(i, idx);
 						}
@@ -876,7 +814,7 @@ double PriorDistInteract::computeLogMotionPrior(const SampleInfo &info, MCMCSamp
 	}
 #if 0
 	if(fabs(ret) < 1e-5) {
-		if(prev_dist_->getNumTargets() > info.idx_) {
+		if(prev_dist_->getNumObjects() > info.idx_) {
 			for(int i = 0; i < motion_prior.cols; i++) {
 				for(int j = 0; j < motion_prior.rows; j++) {
 					std::cout << motion_prior.at<double>(j, i) << " ";
@@ -884,10 +822,10 @@ double PriorDistInteract::computeLogMotionPrior(const SampleInfo &info, MCMCSamp
 				std::cout << std::endl;
 			}
 
-			std::cout << "new state : " << info.state_->x_ << " " << info.state_->y_  << " " << info.state_->z_ << " "  << info.state_->vx_ << " "  << info.state_->vy_ << " "  << info.state_->vz_ << " " << std::endl;
-			PeopleStatePtr state = sample->getState(info.idx_);
+			std::cout << "new state : " << info.obj_state_->x_ << " " << info.obj_state_->y_  << " " << info.obj_state_->z_ << " "  << info.obj_state_->vx_ << " "  << info.obj_state_->vy_ << " "  << info.obj_state_->vz_ << " " << std::endl;
+			ObjectStatePtr state = sample->getObjectState(info.idx_);
 			std::cout << "old state : " << state->x_ << " " << state->y_  << " " << state->z_ << " "  << state->vx_ << " "  << state->vy_ << " "  << state->vz_ << " " << std::endl;
-			state = prev_dist_->getTarget(info.idx_)->getMean();
+			state = prev_dist_->getTargetDist(info.idx_)->getMean();
 			std::cout << "mean state : " << state->x_ << " " << state->y_  << " " << state->z_ << " "  << state->vx_ << " "  << state->vy_ << " "  << state->vz_ << " " << std::endl;
 
 			std::cout << num << std::endl;
@@ -924,14 +862,14 @@ void PriorDistInteract::computeNewSampletMotionPrior(const SampleInfo &info)
 
 void PriorDistInteract::initCache(MCMCSamplePtr sample)
 {
-	if(sample->getNumTargets() > 0) {
-		int num_cols = getInteractionVariableIndex(0, sample->getNumTargets()); 
+	if(sample->getNumObjects() > 0) {
+		int num_cols = getInteractionVariableIndex(0, sample->getNumObjects()); 
 		// number of interaction variables
 		interaction_mode_cache_ = cv::Mat(prev_dist_->getNumSamples(), num_cols, CV_64F);
 
 		// initializat interaction mode cache
-		for(int i = 0; i < sample->getNumTargets(); i++)  {
-			for(int j = i + 1; j < sample->getNumTargets(); j++) {
+		for(int i = 0; i < sample->getNumObjects(); i++)  {
+			for(int j = i + 1; j < sample->getNumObjects(); j++) {
 				SampleInfo info;
 				info.type_ = MoveInteractionFlip;
 				info.idx_ = i;  info.idx2_ = j;
@@ -995,8 +933,8 @@ void PriorDistInteract::computeNewInteractionModePrior(const SampleInfo &info)
 			// both existed in the previous frame
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-				if( prev_sample->getExistance(info.idx_) && 
-					prev_sample->getExistance(info.idx2_) ) {
+				if( prev_sample->getObjectExistance(info.idx_) && 
+					prev_sample->getObjectExistance(info.idx2_) ) {
 					// both existed
 					bool oldMode = prev_sample->getInteractionMode(info.idx_, info.idx2_);
 					bool newMode = info.group_mode_;
@@ -1021,7 +959,7 @@ void PriorDistInteract::computeNewInteractionModePrior(const SampleInfo &info)
 	}
 }
 
-double PriorDistInteract::computePairwiseInteractionPotential(PeopleStatePtr state1, PeopleStatePtr state2, bool isgroup)
+double PriorDistInteract::computePairwiseInteractionPotential(ObjectStatePtr state1, ObjectStatePtr state2, bool isgroup)
 {
 #ifdef VEL_STATE
 	my_assert(state1.get() && state2.get());
@@ -1070,7 +1008,7 @@ double PriorDistInteract::computeInteractionPotential(const SampleInfo &info, MC
 	int min_idx, max_idx;
 	assert(interaction_on_);
 	double ret = 0;
-	PeopleStatePtr state1, state2;
+	ObjectStatePtr state1, state2;
 	my_assert(repulsion_const_ > 0.1);
 	switch(info.type_) {
 		case MoveAdd:
@@ -1079,20 +1017,20 @@ double PriorDistInteract::computeInteractionPotential(const SampleInfo &info, MC
 		case MoveLeave:
 		case MoveDelete: {
 			// further speed up is possible(??)
-			for(size_t i = 0; i < (size_t)sample->getNumTargets(); i++) {
+			for(size_t i = 0; i < (size_t)sample->getNumObjects(); i++) {
 				if(i == info.idx_) continue;
-				state2 = sample->getState(i);
+				state2 = sample->getObjectState(i);
 				// if only both targets exist. otherwise there is no interaction
 				if(state2.get() == NULL) continue;
 
 				min_idx = min((int)i, (int)info.idx_);
 				max_idx = max((int)i, (int)info.idx_);
 
-				state1 = info.state_;
+				state1 = info.obj_state_;
 				if(state1.get() != NULL) { // new sample
 					ret += computePairwiseInteractionPotential(state1, state2, sample->getInteractionMode(min_idx, max_idx));
 				}
-				state1 = sample->getState(info.idx_);
+				state1 = sample->getObjectState(info.idx_);
 				if(state1.get() != NULL) { // old sample
 					ret -= computePairwiseInteractionPotential(state1, state2, sample->getInteractionMode(min_idx, max_idx));
 				}
@@ -1104,8 +1042,8 @@ double PriorDistInteract::computeInteractionPotential(const SampleInfo &info, MC
 			int min_idx = info.idx_;
 			int max_idx = info.idx2_;
 
-			state1 = sample->getState(info.idx_);
-			state2 = sample->getState(info.idx2_);
+			state1 = sample->getObjectState(info.idx_);
+			state2 = sample->getObjectState(info.idx2_);
 
 			my_assert(info.idx_ < info.idx2_);
 			my_assert(state1.get() && state2.get());
@@ -1132,17 +1070,17 @@ void PriorDistCameraEstimate::initCache(MCMCSamplePtr sample)
 	camera_prior_cache_ = cv::Mat(prev_dist_->getNumSamples(), 1, CV_64F);
 	SampleInfo info;
 	info.type_ = MoveCamUpdate;
-	info.cam_state_ = sample->getCamState();
+	info.cam_state_ = sample->getCameraState();
 	computeNewCameraPrior(info);
 	updateCache(info, true);
 
-	feature_prior_cache_ = cv::Mat(prev_dist_->getNumSamples(), prev_dist_->getNumFeats(), CV_64F);
+	feature_prior_cache_ = cv::Mat(prev_dist_->getNumSamples(), prev_dist_->getNumFeatures(), CV_64F);
 	// no prior for newly entered features
-	for(int i = 0; i < prev_dist_->getNumFeats(); i++) {
+	for(int i = 0; i < prev_dist_->getNumFeatures(); i++) {
 		info.idx_ = i;
-		if(sample->getFeatValidity(i)) {
+		if(sample->getFeatureValidity(i)) {
 			info.type_ = MoveFeatStay;
-			info.feat_state_ = sample->getFeatState(i);
+			info.feat_state_ = sample->getFeatureState(i);
 		}
 		else {
 			info.type_ = MoveFeatLeave;
@@ -1166,7 +1104,7 @@ void PriorDistCameraEstimate::updateCache(const SampleInfo &info, bool accepted)
 			case MoveFeatStay:
 			case MoveFeatLeave:
 			case MoveFeatUpdate:
-				if(info.idx_ < (unsigned int)prev_dist_->getNumFeats()) {
+				if(info.idx_ < (unsigned int)prev_dist_->getNumFeatures()) {
 					for(int i = 0; i < feature_prior_cache_.rows; i++)  {
 						feature_prior_cache_.at<double>(i, info.idx_) = one_feature_prior_cache_.at<double>(i, 0);
 					}
@@ -1181,11 +1119,11 @@ void PriorDistCameraEstimate::updateCache(const SampleInfo &info, bool accepted)
 
 void PriorDistCameraEstimate::setParameters(const std::string &name, const std::string &value)
 {
-	if (name == "CameraMotionSigmaX")  camera_motion_sigma_x_ = boost::lexical_cast<double>(value);
-	else if (name == "CameraMotionSigmaZ")  camera_motion_sigma_z_ = boost::lexical_cast<double>(value);
-	else if (name == "CameraMotionSigmaYaw")  camera_motion_sigma_yaw_ = boost::lexical_cast<double>(value);
-	else if (name == "CameraMotionSigmaV")  camera_motion_sigma_v_ = boost::lexical_cast<double>(value);
-	else if (name == "CameraMotionSigmaHorizon")  camera_motion_sigma_horizon_ = boost::lexical_cast<double>(value);
+	if (name == "CameraMotionSigmaX")  camera_motion_params_[2] = boost::lexical_cast<double>(value);
+	else if (name == "CameraMotionSigmaZ")  camera_motion_params_[4] = boost::lexical_cast<double>(value);
+	else if (name == "CameraMotionSigmaYaw")  camera_motion_params_[5] = boost::lexical_cast<double>(value);
+	else if (name == "CameraMotionSigmaV")  camera_motion_params_[6] = boost::lexical_cast<double>(value);
+	else if (name == "CameraMotionSigmaHorizon")  camera_motion_params_[7] = boost::lexical_cast<double>(value);
 	else if (name == "ProbFeatEnter")  prob_feat_enter_ = boost::lexical_cast<double>(value);
 	else if (name == "ProbFeatStay")  prob_feat_stay_ = boost::lexical_cast<double>(value);
 	else PriorDistInteract::setParameters(name, value);
@@ -1262,19 +1200,19 @@ double PriorDistCameraEstimate::computeLogMotionPrior(const SampleInfo &info, MC
 	switch(info.type_) {
 		case MoveAdd:
 		case MoveStay: {
-			double height = info.state_->getY();
+			double height = info.obj_state_->getY();
 			ret +=  pow(thheight, 2) - pow((height - mheight) / sheight, 2);
 		}
 		break;
 		case MoveLeave:
 		case MoveDelete: {
-			double height = sample->getState(info.idx_)->getY();
+			double height = sample->getObjectState(info.idx_)->getY();
 			ret -=  pow(thheight, 2) - pow((height - mheight) / sheight, 2);
 		}
 		break;
 		case MoveUpdate: {
-			double newh = info.state_->getY();
-			double oldh = sample->getState(info.idx_)->getY();
+			double newh = info.obj_state_->getY();
+			double oldh = sample->getObjectState(info.idx_)->getY();
 
 			ret += - pow((newh - mheight) / sheight, 2)
 				 + pow((oldh - mheight) / sheight, 2);
@@ -1286,7 +1224,7 @@ double PriorDistCameraEstimate::computeLogMotionPrior(const SampleInfo &info, MC
 #endif
 #if 0
 	if(fabs(ret) < 1e-5) {
-		if(prev_dist_->getNumTargets() > info.idx_) {
+		if(prev_dist_->getNumObjects() > info.idx_) {
 			for(int i = 0; i < motion_prior.cols; i++) {
 				for(int j = 0; j < motion_prior.rows; j++) {
 					std::cout << motion_prior.at<double>(j, i) << " ";
@@ -1294,10 +1232,10 @@ double PriorDistCameraEstimate::computeLogMotionPrior(const SampleInfo &info, MC
 				std::cout << std::endl;
 			}
 
-			std::cout << "new state : " << info.state_->x_ << " " << info.state_->y_  << " " << info.state_->z_ << " "  << info.state_->vx_ << " "  << info.state_->vy_ << " "  << info.state_->vz_ << " " << std::endl;
-			PeopleStatePtr state = sample->getState(info.idx_);
+			std::cout << "new state : " << info.obj_state_->x_ << " " << info.obj_state_->y_  << " " << info.obj_state_->z_ << " "  << info.obj_state_->vx_ << " "  << info.obj_state_->vy_ << " "  << info.obj_state_->vz_ << " " << std::endl;
+			ObjectStatePtr state = sample->getObjectState(info.idx_);
 			std::cout << "old state : " << state->x_ << " " << state->y_  << " " << state->z_ << " "  << state->vx_ << " "  << state->vy_ << " "  << state->vz_ << " " << std::endl;
-			state = prev_dist_->getTarget(info.idx_)->getMean();
+			state = prev_dist_->getTargetDist(info.idx_)->getMean();
 			std::cout << "mean state : " << state->x_ << " " << state->y_  << " " << state->z_ << " "  << state->vx_ << " "  << state->vy_ << " "  << state->vz_ << " " << std::endl;
 
 			std::cout << num << std::endl;
@@ -1325,7 +1263,7 @@ cv::Mat PriorDistCameraEstimate::computeAllFeatureMotionPrior(const SampleInfo &
 			case MoveFeatStay:
 			case MoveFeatLeave:
 			case MoveFeatUpdate: {
-				if(info.idx_ < (unsigned int)prev_dist_->getNumFeats()) {
+				if(info.idx_ < (unsigned int)prev_dist_->getNumFeatures()) {
 					for(int i = 0; i < prev_dist_->getNumSamples(); i++) {
 						ret.at<double>(i, 0) = one_feature_prior_cache_.at<double>(i, 0); // new prior
 						ret.at<double>(i, 1) = feature_prior_cache_.at<double>(i, (int)info.idx_); // old prior
@@ -1453,10 +1391,10 @@ void PriorDistCameraEstimate::computeNewFeaturePrior(const SampleInfo &info)
 		if((info.type_ == MoveFeatStay) || (info.type_ == MoveFeatUpdate)) {
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-				if(prev_sample->getFeatValidity(info.idx_)) {
+				if(prev_sample->getFeatureValidity(info.idx_)) {
 					one_feature_prior_cache_.at<double>(i, 0) = 
 						log(prob_feat_stay_);
-						// + PROB_WEIGHT_FEAT_DIST * feat_state_dist(prev_sample->getFeatState(info.idx_), info.feat_state_);
+						// + PROB_WEIGHT_FEAT_DIST * feat_state_dist(prev_sample->getFeatureState(info.idx_), info.feat_state_);
 				}
 				else {
 					one_feature_prior_cache_.at<double>(i, 0) = 
@@ -1468,7 +1406,7 @@ void PriorDistCameraEstimate::computeNewFeaturePrior(const SampleInfo &info)
 			my_assert(info.type_ == MoveFeatLeave);
 			for(int i = 0; i < num_samples; i++) {
 				MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-				if(prev_sample->getFeatValidity(info.idx_)) {
+				if(prev_sample->getFeatureValidity(info.idx_)) {
 					one_feature_prior_cache_.at<double>(i, 0) = 
 						log(1 - prob_feat_stay_);
 				}
@@ -1495,48 +1433,16 @@ void PriorDistCameraEstimate::computeNewCameraPrior(const SampleInfo &info)
 	my_assert(info.type_ == MoveCamUpdate);
 	double dt = timestamp_ - prev_dist_->getTimeStamp();
 
-	CamStatePtr state = info.cam_state_;
+	CameraStatePtr state = info.cam_state_;
 	for(int i = 0; i < num_samples; i++) {
 		MCMCSamplePtr prev_sample = prev_dist_->getSample(i);
-		CamStatePtr prev_state = prev_sample->getCamState();
+		CameraStatePtr prev_state = prev_sample->getCameraState();
 		if(prev_state.get() == NULL) {
 			my_assert(num_samples <= 2);
 			// no camera prior at all. It's the first frame
 			new_camera_prior_cache_.at<double>(i, 0) = 0.0;
 			continue;
 		}
-#if 1
-		double dx, dz;
-		dx = -state->getV() * sin(state->getYaw()) * dt;
-		dz = state->getV() * cos(state->getYaw()) * dt;
-		new_camera_prior_cache_.at<double>(i, 0) = 
-			log_gaussian_prob(state->getX() - dx, prev_state->getX(), camera_motion_sigma_x_ * dt)
-			+ log_gaussian_prob(state->getZ() - dz, prev_state->getZ(), camera_motion_sigma_z_ * dt)
-			+ log_gaussian_prob(state->getYaw(), prev_state->getYaw(), camera_motion_sigma_yaw_ * dt)
-			+ log_gaussian_prob(state->getHorizon(), prev_state->getHorizon(), camera_motion_sigma_horizon_ * dt)
-			+ log_gaussian_prob(state->getV(), prev_state->getV(), camera_motion_sigma_v_ * dt);
-		// avoid negative velocity
-		if(state->getV() < 0) new_camera_prior_cache_.at<double>(i, 0) -= 100;
-#if 0	
-		std::cout	
-			<< "x std " << camera_motion_sigma_x_ * dt
-			<< "z std " << camera_motion_sigma_z_ * dt
-			<< "yaw std " << camera_motion_sigma_yaw_ * dt
-			<< "horizon std " << camera_motion_sigma_horizon_ * dt
-			<< "v std " << camera_motion_sigma_v_ * dt << std::endl;
-
-		std::cout << "new_cam ";
-		state->print();
-		std::cout << "prev_cam ";
-		prev_state->print();
-		std::cout << "log_prob : " << new_camera_prior_cache_.at<double>(i, 0) << std::endl;
-		assert(0);
-#endif
-#else
-		new_camera_prior_cache_.at<double>(i, 0) = 
-			log_gaussian_prob(state->getX(), prev_state->getX(), camera_motion_sigma_x_ * dt)
-			+ log_gaussian_prob(state->getZ(), prev_state->getZ(), camera_motion_sigma_z_ * dt)
-			+ log_gaussian_prob(state->getYaw(), prev_state->getYaw(), camera_motion_sigma_yaw_ * dt);
-#endif
+		new_camera_prior_cache_.at<double>(i, 0) = prev_state->computeLogPrior(state, timestamp_, camera_motion_params_);
 	}
 }

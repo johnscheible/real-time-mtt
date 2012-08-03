@@ -74,6 +74,8 @@ namespace people {
 
 		mean_horizon_ = 0;
 		std_horizon_ = 0;
+
+		has_depth_ = false;
 	}
 
 	ObservationManager::~ObservationManager()
@@ -181,14 +183,7 @@ namespace people {
 			bbs.push_back(dets[i]);
 		}
 		cv::groupRectangles(bbs, 1, 0.2);
-#if 0
-		std::cout << "responses ";
-		for(size_t i = 0; i < current_feat_idx.size(); i++)
-		{
-			std::cout << current_feat_idx[i] << ":" << responses[i] << " ";
-		}
-		std::cout << std::endl;
-#endif
+
 		gfeats_.clear(); // clear all features;
 		gfeats_idx_.clear(); // clear all features;
 		// find matches
@@ -255,7 +250,7 @@ namespace people {
 	{
 	public:    
 		SimilarProposals(double delta) : delta_sq_(delta * delta) {}
-		inline bool operator()(const PeopleStatePtr p1, const PeopleStatePtr p2) const
+		inline bool operator()(const ObjectStatePtr p1, const ObjectStatePtr p2) const
 		{
 			return state_dist(p1, p2) < delta_sq_;
 		}    
@@ -279,21 +274,18 @@ namespace people {
 	void ObservationManager::quaryData(const std::string &name, void *data)
 	{
 		std::vector<ObservationNode*>::iterator it;
-		for(it = nodes_.begin(); it < nodes_.end(); it++)
-		{
+		for(it = nodes_.begin(); it < nodes_.end(); it++) {
 			(*it)->quaryData(name, data);
 		}
 	}
 
-	GFeatStatePtr ObservationManager::getInitialGFeatState(int idx, CamStatePtr cam_state)
+	FeatureStatePtr ObservationManager::getInitialFeatureState(int idx, CameraStatePtr cam_state)
 	{
 		std::vector<int>::iterator it = std::find(gfeats_idx_.begin(), gfeats_idx_.end(), idx);
 		assert(*it == idx);
-
 		int i = (int)(it - gfeats_idx_.begin());
 		cv::Point2f pt = gfeats_[i];
-
-		GFeatStatePtr feat = getGFeatStateFromPoint(pt, cam_state);
+		FeatureStatePtr feat = cam_state->iproject(pt);
 #if 0
 		if(isnan(feat->x_) || isnan(feat->y_) || isnan(feat->z_) || 
 		  isinf(feat->x_) || isinf(feat->y_) || isinf(feat->z_)) {
@@ -306,36 +298,65 @@ namespace people {
 		return feat;
 	}
 
-	double 	ObservationManager::getCameraConfidence(CamStatePtr cam_state)
+	double 	ObservationManager::getCameraConfidence(CameraStatePtr cam_state)
 	{
-		double ret = vp_est_.getHorizonConfidence(cam_state->getHorizon());
-
-		std::vector<int> votes;
-		std::vector<double> std;
-		getHorizonVotes(votes, std, cam_state->getY());
-
-		for(size_t i = 0; i < votes.size(); i++) {
-			double diff = votes[i] - cam_state->getHorizon();
-			ret -= min(pow(diff / std[i], 2), 9.0);
+		double ret = 0;
+		if(cam_state->getStateType() == "simplified_camera") {
+			// ret = vp_est_.getHorizonConfidence(cam_state->getHorizon());
+			ret = vp_est_.getHorizonConfidence(cam_state->getElement(7));
+			std::vector<int> votes;
+			std::vector<double> std;
+			getHorizonVotes(votes, std, cam_state->getElement(3));
+			for(size_t i = 0; i < votes.size(); i++) {
+				double diff = votes[i] - cam_state->getElement(7);
+				ret -= min(pow(diff / std[i], 2), 9.0);
+			}
+			if(mean_horizon_ != 0) {
+				ret -= pow((cam_state->getElement(7) - mean_horizon_) / std_horizon_, 2);
+			}
 		}
-		if(mean_horizon_ != 0) {
-			ret -= pow((cam_state->getHorizon() - mean_horizon_) / std_horizon_, 2);
+		else {
+			// not implemented!
+			assert(0);
 		}
-
 		return ret;
 	}
 
-	double	ObservationManager::getPeopleConfidence(PeopleStatePtr ped_state, CamStatePtr cam_state, std::string type)
+	CameraStatePtr	ObservationManager::initializeCamera(CameraStatePtr cam_state)
+	{
+		if(cam_state->getStateType() == "simplified_camera") {
+			CameraStatePtr temp = cam_state->clone();
+			int imin = cam_state->getElement(7) - 200, imax = cam_state->getElement(7) + 200;
+			double max_conf=-DBL_MAX;
+
+			for(int i = imin; i < imax; i++) {
+				temp->setElement(7, (double)i);
+				double tval = getCameraConfidence(temp);
+				if(max_conf < tval) {
+					cam_state->setElement(7, (double)i);
+					max_conf = tval;
+				}
+			}
+		}
+		else {
+			// not implemented!
+			assert(0);
+		}
+
+		return cam_state;
+	}
+
+	double	ObservationManager::getObjectConfidence(ObjectStatePtr obj_state, CameraStatePtr cam_state, std::string type)
 	{
 		double ret = 0;
 		cv::Rect rt;
 
 		// assuming y is height direction!!!
-		if((ped_state->getY() < min_height_) || (ped_state->getY() > max_height_))
+		if((obj_state->getElement(1) < min_height_) || (obj_state->getElement(1) > max_height_))
 			return obs_lkhood_out_of_height_;
 
 		// get image projection.
-		rt = cam_state->project(ped_state);
+		rt = cam_state->project(obj_state);
 
 		if(type == std::string("all")) {
 			// iterate over all observation nodes_
@@ -364,18 +385,23 @@ namespace people {
 		return ret;
 	}
 
-	double	ObservationManager::getGFeatConfidence(GFeatStatePtr feat_state, int feat_idx, CamStatePtr cam_state, std::string type)
+	double	ObservationManager::getFeatureConfidence(FeatureStatePtr feat_state, int feat_idx, CameraStatePtr cam_state, std::string type)
 	{
-		cv::Point2f proj = cam_state->project(feat_state);
-		// assert(proj.z != 0.0);
-		cv::Point2f obs = gfeats_[feat_idx];
-		// temp parameters
-		// double gfeat_sigma_u_ = 2, gfeat_sigma_v_ = 2, gfeat_sigma_d_ = 0.1 * proj.z;
-		double ret = log_gaussian_prob(obs.x, proj.x, gfeat_sigma_u_);
-		ret += log_gaussian_prob(obs.y, proj.y, gfeat_sigma_v_);
-		// returning log(P(feat, valid | obs) / P(feat, invalid | obx))
-		ret -= log_gaussian_prob(1.4 * gfeat_sigma_u_, 0.0, gfeat_sigma_u_)
-				+ log_gaussian_prob(1.4 * gfeat_sigma_v_, 0.0, gfeat_sigma_v_);
+		double ret;
+		if(has_depth_)
+		{
+			assert(0);
+		}
+		else {
+			cv::Point3f proj = cam_state->project(feat_state);
+			cv::Point2f obs = gfeats_[feat_idx];
+			
+			ret = log_gaussian_prob(obs.x, proj.x, gfeat_sigma_u_);
+			ret += log_gaussian_prob(obs.y, proj.y, gfeat_sigma_v_);
+			// returning log(P(feat, valid | obs) / P(feat, invalid | obx))
+			ret -= log_gaussian_prob(1.4 * gfeat_sigma_u_, 0.0, gfeat_sigma_u_)
+					+ log_gaussian_prob(1.4 * gfeat_sigma_v_, 0.0, gfeat_sigma_v_);
+		}
 		// remove features with nan 
 		if(isnan(ret)) return -100.0f;
 		my_assert(!isnan(ret));
@@ -445,7 +471,7 @@ namespace people {
 		}
 #endif
 	}
-
+#if 0
 	cv::Mat	ObservationManager::getPeopleConfidenceMap(double y, CamStatePtr cam_state, std::string type)
 	{
 		cv::Mat ret(200, 200, CV_32FC1);
@@ -471,4 +497,5 @@ namespace people {
 
 		return ret;
 	}
+#endif
 }; // Namespace

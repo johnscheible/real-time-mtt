@@ -33,16 +33,14 @@
 #define _RJMCMC_PROPOSAL_H_
 
 #include <opencv/cv.h>
-#include <common/ped_state.h>
-#include <common/cam_state.h>
-#include <common/gfeat_state.h>
+#include <common/states.h>
 #include <common/mcmc_sample.h>
 
 namespace people {
 	class RJMCMCProposal
 	{
 	public:
-		RJMCMCProposal(PosteriorDistPtr prior, double tsec):rng_((double)time(NULL)),prev_dist_(prior),timestamp_(tsec)
+		RJMCMCProposal(PosteriorDistPtr prior, double tsec):prev_dist_(prior),timestamp_(tsec)
 		{
 			// default paramters..
 			move_prob_[MoveAdd] = 0.05 * 0.6;
@@ -58,59 +56,55 @@ namespace people {
 			move_prob_[MoveFeatStay] = 0.0;//0.1 * 0.3;
 			move_prob_[MoveFeatLeave] = 0.0;//0.1 * 0.3;
 			move_prob_[MoveFeatUpdate] = 0.0;//0.6 * 0.3;
-#ifdef VEL_STATE
+
 			det_sigma_x_ = 0.05;
 			det_sigma_y_ = 0.1;
 			det_sigma_h_ = 0.1;
 
-			pert_sigma_x_ = 0.1;
-			pert_sigma_y_ = 0.1;
-			pert_sigma_z_ = 0.1;
+			obj_motion_params_.push_back(0.4);
+			obj_motion_params_.push_back(0.4);
+			obj_motion_params_.push_back(0.4);
+			obj_motion_params_.push_back(3);
+			obj_motion_params_.push_back(0.0); // height direction
+			obj_motion_params_.push_back(0.6);
 
-			pert_sigma_vx_ = 0.5;
-			pert_sigma_vz_ = 0.1;
-
-			motion_sigma_x_ = 0.4;
-			motion_sigma_y_ = 0.4;
-			motion_sigma_z_ = 0.4;
-
-			motion_sigma_vx_ = 3;
-			motion_sigma_vz_ = .6;
-#else
-			det_sigma_x_ = 0.05;
-			det_sigma_y_ = 0.1;
-			det_sigma_h_ = 0.1;
-
-			sigma_x_ = 0.03;
-			sigma_y_ = 0.03;
-			sigma_z_ = 0.02;
-#endif
- 			pert_cam_sigma_x_ = 0.2;
- 			pert_cam_sigma_z_ = 0.05;
- 			pert_cam_sigma_yaw_ = 0.03;
- 			pert_cam_sigma_v_ = 0.03;
- 			pert_cam_sigma_horizon_ = 0.03;
+			obj_pert_params_.push_back(0.1); // x
+			obj_pert_params_.push_back(0.1); // y
+			obj_pert_params_.push_back(0.1); // z
+			obj_pert_params_.push_back(0.5); // vx
+			obj_pert_params_.push_back(0.0); // vy/height direction
+			obj_pert_params_.push_back(0.1); // vz
+			
+			cam_pert_params_.push_back(0.0); // focal
+			cam_pert_params_.push_back(0.0); // xcenter
+			cam_pert_params_.push_back(0.2); // x_
+			cam_pert_params_.push_back(0.0); // y_
+			cam_pert_params_.push_back(0.05); // z_
+			cam_pert_params_.push_back(0.03); // yaw_
+			cam_pert_params_.push_back(0.03); // v_
+			cam_pert_params_.push_back(0.03); // horizon_
+	
+			feat_pert_params_.push_back(0.2); // x
+			feat_pert_params_.push_back(0.0); // y
+			feat_pert_params_.push_back(0.2); // z
 
 			prob_interaction_flip_ = 0.9;
 			min_frames_group_ = 7;
 		};
 
 		virtual 	~RJMCMCProposal() {};
-
 		virtual void	setParameters(const std::string &name, const std::string &value);
-		
 		//
 		virtual void initCache(MCMCSamplePtr sample);
 		virtual void updateCache(const SampleInfo &info, bool accepted);
 		virtual void setDetections(const std::vector<cv::Rect> &dets){dets_ = dets;};
 		virtual SampleInfo drawNewSample(MCMCSamplePtr sample);
 		virtual double getProposalLogLkhood(const MCMCSamplePtr sample, const SampleInfo &info); // for acceptance ratio computation
-
 		// debug
 		virtual void 				dbgCheckCache(MCMCSamplePtr sample);
 		virtual void 				printCache();
 	protected:
-		virtual double 				stateProposalStay(MCMCSamplePtr sample, PeopleStatePtr state, int idx);
+		virtual double 				stateProposalStay(MCMCSamplePtr sample, ObjectStatePtr state, int idx);
 		// each proposal moves
 		virtual SampleInfo			addTarget(MCMCSamplePtr sample);
 		virtual SampleInfo			deleteTarget(MCMCSamplePtr sample);
@@ -123,8 +117,6 @@ namespace people {
 		virtual SampleInfo			leaveFeature(MCMCSamplePtr sample);
 		virtual SampleInfo			updateFeature(MCMCSamplePtr sample);
 	protected:
-		// random value generator
-		cv::RNG					rng_;
 		// previous time posterior
 		PosteriorDistPtr		prev_dist_;
 		// detection proposals
@@ -142,7 +134,20 @@ namespace people {
 
 		// parameters
 		double					move_prob_[MoveNums];
-#ifdef VEL_STATE
+		
+		// for stay move...
+		std::vector<double> obj_motion_params_;
+		// std::vector<double> feat_motion_params_;
+		// std::vector<double> cam_motion_params_;
+
+		std::vector<double> obj_pert_params_;
+		std::vector<double> feat_pert_params_;
+		std::vector<double> cam_pert_params_;
+
+		double					det_sigma_x_;
+		double					det_sigma_y_;
+		double					det_sigma_h_;
+#if 0
 		double					motion_sigma_x_;
 		double					motion_sigma_y_;
 		double					motion_sigma_z_;
@@ -156,24 +161,14 @@ namespace people {
 		double					pert_sigma_vx_;
 		// double					pert_sigma_vy_;
 		double					pert_sigma_vz_;
-#else
-		double					sigma_x_;
-		double					sigma_y_;
-		double					sigma_z_;
-#endif
-		double					det_sigma_x_;
-		double					det_sigma_y_;
-		double					det_sigma_h_;
-
 		double					pert_cam_sigma_x_;
 		double					pert_cam_sigma_z_;
 		double					pert_cam_sigma_yaw_;
 		double					pert_cam_sigma_v_;
 		double					pert_cam_sigma_horizon_;
-
 		double					pert_feat_sigma_x_;
 		double					pert_feat_sigma_z_;
-
+#endif
 		double					prob_interaction_flip_;
 		int							min_frames_group_;
 	};

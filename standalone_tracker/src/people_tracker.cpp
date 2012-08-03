@@ -47,6 +47,11 @@
 // program option
 #include <boost/program_options.hpp>
 
+#include <common/states.h>
+#include <common/ped_state.h>
+#include <common/gfeat_state.h>
+#include <common/cam_state.h>
+
 using namespace std;
 using namespace people;
 namespace po = boost::program_options;
@@ -578,19 +583,19 @@ cv::Scalar get_target_color(int id) {
 cv::Mat draw_features(ObservationManager *mgr, PosteriorDistPtr dist, cv::Mat &image_color, const std::vector<int> &remove_idx, bool bshow = true)
 {
 	cv::Mat image = image_color.clone();
-	CamStatePtr mean_cam = dist->getMeanCamera();
+	CameraStatePtr mean_cam = dist->getMeanCamera();
 	
 	int fsize1, fsize2, fsize3;
 	fsize1 = floor(image_color.cols / 400);
 	fsize2 = floor(image_color.cols / 200);
 	fsize3 = floor(image_color.cols / 50);
 
-	for(int i = 0; i < dist->getNumFeats(); i++) {
+	for(int i = 0; i < dist->getNumFeatures(); i++) {
 		cv::Point2f pt2;
 		FeatureDistPtr feat_dist = dist->getFeatureDist(i);
-		std::vector<GFeatStatePtr> feats = feat_dist->getAllSamples();
+		std::vector<FeatureStatePtr> feats = feat_dist->getAllSamples();
 		for(size_t j = 0; j < feats.size(); j++) {
-			cv::Point2f pt = mean_cam->project(feats[j]);
+			cv::Point3f pt = mean_cam->project(feats[j]);
 			pt2.x = pt.x;
 			pt2.y = pt.y;
 			cv::circle(image, pt2, fsize1, cv::Scalar(10, 10, 10), CV_FILLED);
@@ -611,7 +616,7 @@ cv::Mat draw_features(ObservationManager *mgr, PosteriorDistPtr dist, cv::Mat &i
 		cv::rectangle(image, rt.tl(), rt.br(), col, fsize2);
 	}
 	
-	assert(all_feats.size() == dist->getNumFeats());
+	assert(all_feats.size() == dist->getNumFeatures());
 	
 	if(bshow) {
 #if 1
@@ -642,7 +647,8 @@ cv::Mat draw_features2(TargetManager &mgr, double ts, cv::Mat &image_color, cons
 	return image;
 }
 
-void draw_confidence_map(ObservationManager *mgr, double height, CamStatePtr mcam)
+#if 0
+void draw_confidence_map(ObservationManager *mgr, double height, CameraStatePtr mcam)
 {
 	cv::Mat cmap = mgr->getPeopleConfidenceMap(height, mcam, "all");
 	cv::Mat cmap2(200, 200, CV_8U);
@@ -662,6 +668,7 @@ void draw_confidence_map(ObservationManager *mgr, double height, CamStatePtr mca
 	cv::imshow("conf", cmap2);
 #endif
 }
+#endif
 
 cv::Mat draw_detections(ObservationManager *mgr, cv::Mat &image_color)
 {
@@ -722,8 +729,8 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 	int ntargets;
 
 	MCMCSamplePtr sample;
-	CamStatePtr cam;
-	PeopleStatePtr ped;
+	CameraStatePtr cam;
+	ObjectStatePtr ped;
 	cv::Rect rt;
 	
 	int thinline = floor(image.cols / 600);
@@ -738,11 +745,11 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 	for( int i = 0; i < nsamples; i++ ) {
 		sample = dist->getSample(i);
 
-		ntargets = sample->getNumTargets();
-		cam = sample->getCamState();
-		cv::line(image, cv::Point(0, cam->getHorizon()), cv::Point(image.cols, cam->getHorizon()), cv::Scalar(255, 0, 255), thinline);
+		ntargets = sample->getNumObjects();
+		cam = sample->getCameraState();
+		cv::line(image, cv::Point(0, cam->getElement(7)), cv::Point(image.cols, cam->getElement(7)), cv::Scalar(255, 0, 255), thinline);
 		// draw view point
-		double angle = cam->getYaw();
+		double angle = cam->getElement(5);
 		angle = -M_PI / 2 - angle;
 		double x = cos(angle), z = sin(angle);
 		// box
@@ -750,14 +757,14 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 
 		// samples on image plane
 		for( int j = 0; j < ntargets; j++ ) {
-			if(sample->getExistance(j)) {
-				ped = sample->getState(j);
+			if(sample->getObjectExistance(j)) {
+				ped = sample->getObjectState(j);
 				rt = cam->project(ped);
 				cv::rectangle(image, rt.tl(), rt.br(), cv::Scalar(150, 100, 100), 1);
 
 				for(size_t k = 0; k < j; k++) {
-					if(sample->getExistance(k) && sample->getInteractionMode(k, j)) {
-						cv::Rect rt2 = cam->project(sample->getState(k));
+					if(sample->getObjectExistance(k) && sample->getInteractionMode(k, j)) {
+						cv::Rect rt2 = cam->project(sample->getObjectState(k));
 
 						cv::line(image, cv::Point(rt.x + rt.width / 2, rt.y + rt.height), cv::Point(rt2.x + rt2.width / 2, rt2.y + rt2.height), cv::Scalar(100, 0, 100), 1);
 					}
@@ -767,13 +774,13 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 
 		// samples on top view
 		for( int j = 0; j < ntargets; j++ ) {
-			if(sample->getExistance(j)) {
-				ped = sample->getState(j);
+			if(sample->getObjectExistance(j)) {
+				ped = sample->getObjectState(j);
 				cv::Point pt;
 
 				// 1 meter == 10 pixel
-				pt.y = ( ped->getX() - cam->getX() ) * 10.0 + 200;
-				pt.x = ( ped->getZ() - cam->getZ() ) * 10.0 + 200;
+				pt.y = ( ped->getElement(0) - cam->getElement(2) ) * 10.0 + 200;
+				pt.x = ( ped->getElement(2) - cam->getElement(4) ) * 10.0 + 200;
 
 				cv::circle(image_top, pt, 1, get_target_color(j), 3);
 			}
@@ -799,6 +806,31 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 	}
 
 	return image;
+}
+
+void dbg_test()
+{
+	ObjectStatePtr obj(new ObjectStateVel);
+	ObjectStatePtr m = obj->clone();
+	
+	std::vector<double> params;
+	
+	params.push_back(.0);
+	params.push_back(.0);
+	params.push_back(.0);
+	params.push_back(.0);
+	params.push_back(.0);
+	params.push_back(10.0);
+	double	dt = 1.0 / 15;
+	
+	obj->setTS(dt);
+	for(size_t i = 0; i < 100; i++) {
+		obj = m->clone();
+		obj = obj->perturbState(params, dt);
+		obj->print();
+		std::cout << "logprob: " << m->computeLogPrior(obj, dt, params) << std::endl;
+	}
+	assert(0);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -935,10 +967,21 @@ int main (int ac, char** av)
 	tracker.setParameters("DetectionSigmaH", boost::lexical_cast<std::string>(params.detection_std_h));
 	
 	// initialize the first frame camera
-	CamStatePtr init_cam = boost::make_shared<CamState>();
+	CameraStatePtr init_cam(new SimplifiedCameraState<ObjectStateVel,StaticFeatureState>);
+#if 1
+	init_cam->setElement(0, params.init_cam_focal);
+	init_cam->setElement(1, params.init_cam_xcenter);
+	init_cam->setElement(2, params.init_cam_x);
+	init_cam->setElement(3, params.init_cam_y);
+	init_cam->setElement(4, params.init_cam_z);
+	init_cam->setElement(5, params.init_cam_yaw);
+	init_cam->setElement(6, params.init_cam_v);
+	init_cam->setElement(7, params.init_cam_horizon);
+#else
 	init_cam->set(params.init_cam_x,	params.init_cam_y, params.init_cam_z,
 				params.init_cam_v,	params.init_cam_yaw, params.init_cam_horizon,
 				params.init_cam_focal, params.init_cam_xcenter,	0.0);
+#endif
 	tracker.setInitialCamera(init_cam);
 	// feat_tracker.showImage(true);
 	mgr->setData((void*)&feat_tracker, "feat_tracker");
@@ -975,7 +1018,7 @@ int main (int ac, char** av)
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		mgr->preprocess();
 #if 0
-		CamStatePtr temptemp = boost::make_shared<CamState>();
+		CameraStatePtr temptemp = boost::make_shared<CamState>();
 		temptemp->set(params.init_cam_x,	params.init_cam_y, params.init_cam_z,
 					params.init_cam_v,	params.init_cam_yaw, params.init_cam_horizon,
 					params.init_cam_focal, params.init_cam_xcenter,	0.0);
@@ -1021,7 +1064,7 @@ int main (int ac, char** av)
 		
 		// process targets
 		std::vector<cv::Rect> target_rts;
-		CamStatePtr mean_cam = posterior_dist->getMeanCamera();
+		CameraStatePtr mean_cam = posterior_dist->getMeanCamera();
 		for(size_t j = 0; j < tracks.size(); j++) {
 			target_rts.push_back(mean_cam->project(tracks[j]->getMean()));
 		}
@@ -1042,17 +1085,18 @@ int main (int ac, char** av)
 		assert(obs.size() == feat_dists.size());
 
 		for(size_t j = 0; j < feat_dists.size(); j++) {
-			pts.push_back(mean_cam->project(feat_dists[j]->getMean()));
+			cv::Point3f pt = mean_cam->project(feat_dists[j]->getMean());
+			pts.push_back(cv::Point2f(pt.x, pt.y));
 		}
 		target_manager.updateFeatures(feat_idx, feat_dists, pts, obs);
 
 		// filter features ...
 		remove_idx.clear();
-		for(int j = 0; j < posterior_dist->getNumFeats(); j++) {
-			GFeatStatePtr feat = posterior_dist->getMeanFeature(j);
+		for(int j = 0; j < posterior_dist->getNumFeatures(); j++) {
+			FeatureStatePtr feat = posterior_dist->getMeanFeature(j);
 			// feat->print();
-			if(posterior_dist->getMeanFeatValidity(j) < 0.2 || 
-				pts[j].y < mean_cam->getHorizon() + 20) { // safeguard
+			if(posterior_dist->getMeanFeatureValidity(j) < 0.2 || 
+				pts[j].y < mean_cam->getElement(7) + 20) { // safeguard
 				remove_idx.push_back(j);
 				// std::cout << "============> remove " << j << std::endl;
 			}
@@ -1082,13 +1126,13 @@ int main (int ac, char** av)
 			show_image(frame, "VP", 600);
 		}
 #endif
-		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getHorizon(), 0.0);
+		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getElement(7), 0.0);
 		target_manager.updateLines(mgr->getVPEstimator()->getAllLines(), mgr->getVPEstimator()->getLinesIntersectingPoint(pt), timesec);
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		// draw functions
 		/////////////////////////////////////////////////////////////////////////////////////////////////
-		if(params.showimg) draw_confidence_map(mgr, 1.1, mean_cam);
+		// if(params.showimg) draw_confidence_map(mgr, 1.1, mean_cam);
 		frame = draw_targets(target_manager, image_color, timesec, params.showimg);
 		if(video_target.isOpened()) {
 			video_target << frame;

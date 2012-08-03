@@ -61,23 +61,17 @@ namespace people {
 		virtual std::vector<int> preprocessFeats(const std::vector<int>& prev_feats_idx, const int max_feats, const std::vector<cv::Rect> &targets = std::vector<cv::Rect>());
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// getConfidence
-		virtual double 	getCameraConfidence(CamStatePtr cam_state);
-		virtual double	getPeopleConfidence(PeopleStatePtr ped_state, CamStatePtr cam_state, std::string type = std::string("all"));
-		virtual double	getGFeatConfidence(GFeatStatePtr feat_state, int feat_idx, CamStatePtr cam_state, std::string type = std::string("all"));
+		virtual double 	getCameraConfidence(CameraStatePtr cam_state);
+		virtual double	getObjectConfidence(ObjectStatePtr ped_state, CameraStatePtr cam_state, std::string type = std::string("all"));
+		virtual double	getFeatureConfidence(FeatureStatePtr feat_state, int feat_idx, CameraStatePtr cam_state, std::string type = std::string("all"));
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		virtual std::vector<cv::Rect> getDetections();
 
-		virtual GFeatStatePtr getInitialGFeatState(int idx, CamStatePtr cam_state);
-		// virtual double		getDepthFromState(PeopleStatePtr state, CamStatePtr cam_state);
-		virtual cv::Mat	getPeopleConfidenceMap(double y, CamStatePtr cam_state, std::string type = std::string("all")); 
+		virtual CameraStatePtr	initializeCamera(CameraStatePtr cam_state);
+		virtual FeatureStatePtr getInitialFeatureState(int idx, CameraStatePtr cam_state);
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		// camera projection functions
-		virtual cv::Rect getRectFromState(PeopleStatePtr ped_state, CamStatePtr cam_state) { return cam_state->project(ped_state); }
-		virtual cv::Point2f getPointFromState(GFeatStatePtr feat_state, CamStatePtr cam_state) { return cam_state->project(feat_state); }
-		virtual PeopleStatePtr getPeopleStateFromRect(cv::Rect &rt, CamStatePtr cam_state) { return cam_state->iproject(rt); }
-		virtual GFeatStatePtr getGFeatStateFromPoint(cv::Point2f &pt, CamStatePtr cam_state) { return cam_state->iproject(pt); }
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// virtual double		getDepthFromState(PeopleStatePtr state, CamStatePtr cam_state);
+		// virtual cv::Mat	getObjectConfidenceMap(double y, CameraStatePtr cam_state, std::string type = std::string("all")); 
 		virtual std::vector<int> getFeatsIndex() { return gfeats_idx_; };
 		virtual std::vector<cv::Point2f> getAllFeats() { return gfeats_; };
 
@@ -85,7 +79,6 @@ namespace people {
 		inline double 	getTimeSec() {return time_sec_;};
 		inline cv::Mat	getImage() {return img_color_;}
 		inline cv::Mat	getImageMono() {return img_mono_;}
-
 		void getHorizonVotes(std::vector<int> &votes, std::vector<double> &stds, double camh);
 
 		// misc functions
@@ -115,6 +108,9 @@ namespace people {
 
 		double 								mean_horizon_;
 		double 								std_horizon_;
+
+		bool									has_depth_;
+		cv::Mat								img_depth_;
 	};
 }; // Namespace
 #endif // _OBSERVATION_MANAGER_H_

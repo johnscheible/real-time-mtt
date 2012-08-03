@@ -31,54 +31,34 @@
 
 #ifndef _PED_STATE_H_
 #define _PED_STATE_H_
-
-#include <iostream>
-#include <iomanip>
 #include <string.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <common/global.h>
-// #include <LinearMath/btTransform.h>
-
-#define NUM_PERSON_SUBTYPE 		1
-#define WH_PERSON_RATIO			3
-#define MEAN_PERSON_HEIGHT 		1.7
-#define STD_PERSON_HEIGHT		0.1
-
-#define NUM_CAR_SUBTYPE		2
-#define WH_CAR_RATIO1		0.5
-#define WH_CAR_RATIO0		0.75
-#define MEAN_CAR_HEIGHT 	1.2
-#define STD_CAR_HEIGHT		0.2
+#include <common/states.h>
 
 namespace people {
-	class PeopleStateLoc;
-	typedef boost::shared_ptr<PeopleStateLoc> PeopleStateLocPtr;
-	
-	using namespace std;
-
-	class PeopleStateLoc
+	class ObjectStateLoc: public ObjectState
 	{
 	public:
-		PeopleStateLoc():x_(0.0),y_(0.0),z_(0.0),timesec_(0),confidence_(0) {};
-		virtual ~PeopleStateLoc() {};
-
-		// copy state
-		inline virtual void copyTo(PeopleStateLocPtr dst)
+		ObjectStateLoc():x_(0.0),y_(0.0),z_(0.0),ObjectState()
 		{
-			dst->x_ = x_;
-			dst->y_ = y_;
-			dst->z_ = z_;
-			dst->timesec_ = timesec_;
-			dst->confidence_ = confidence_;
+			state_type_ = "object_location";
+		};
+
+		virtual ~ObjectStateLoc() {};
+		// copy state
+		inline virtual void copyTo(ObjectStatePtr dst)
+		{
+			dst->setElement(0, x_);
+			dst->setElement(1, y_);
+			dst->setElement(2, z_);
+
+			dst->setTS(timesec_);
+			dst->setConfidence(confidence_);
 		}
 	
 		// clone state
-		inline virtual PeopleStateLocPtr clone() 
+		inline virtual ObjectStatePtr clone() 
 		{
-			PeopleStateLocPtr ret = boost::make_shared<PeopleStateLoc>(PeopleStateLoc());
+			ObjectStatePtr ret(new ObjectStateLoc);
 			copyTo(ret);
 			return ret;
 		}
@@ -87,179 +67,138 @@ namespace people {
 		inline virtual void print()
 		{
 			std::cout << "ts : " << setprecision(6) << timesec_ - floor(timesec_ / 10000) * 10000 << std::endl;
-			std::cout << "loc  : [ x : " << x_ << " y : " << y_<< " z : " << z_ << "]" <<std::endl;
+			std::cout << "loc  : [ x : " << x_ << " y : " << y_<< " z : " << z_ << "]" << std::endl;
 			std::cout << "conf : " << confidence_ << std::endl;
 		}
 
 		// predict location of the state in timesec
-		inline virtual PeopleStateLocPtr predict(double timesec)
+		inline virtual ObjectStatePtr predict(double timesec)
 		{
-			PeopleStateLocPtr ret = clone();
-			// if velocity modelled, predict location
+			ObjectStatePtr ret = clone();
 			return ret;
 		}
 
-		// get Point3d representation
-		inline virtual cv::Point3d getPoint() {	return cv::Point3d(x_, y_, z_);	}
-		
+		// draw a new sample
+		inline virtual ObjectStatePtr drawSample(double timesec, const std::vector<double> &params)
+		{
+			ObjectStatePtr ret = clone();
+
+			// random sampling
+			double dt = timesec - timesec_; // uncertainty over time
+			assert(dt > 0);
+
+			double temp;
+			for(size_t i = 0 ; i < 3; i++) {
+				temp = ret->getElement(i) + g_rng.gaussian(params[i] * dt);
+				ret->setElement(i, temp);
+			}
+			ret->setTS(timesec);
+
+			return ret;
+		}
+
+		inline virtual ObjectStatePtr perturbState(const std::vector<double> &params, double c = 1.0)
+		{
+			ObjectStatePtr ret = clone();
+			// random sampling
+			double temp;
+			for(size_t i = 0 ; i < 3; i++) {
+				temp = ret->getElement(i) + c * g_rng.gaussian(params[i]);
+				ret->setElement(i, temp);
+			}
+			return ret;
+		}
+
+		// draw a new sample
+		virtual double computeLogPrior(ObjectStatePtr state, double timesec, const std::vector<double> &params)
+		{
+			double ret = 0, dt = timesec - timesec_;
+			assert(dt > 0);
+			for(size_t i = 0 ; i < 3; i++) {
+				ret += log_gaussian_prob(getElement(i), state->getElement(i), params[i] * dt);
+			}
+			return ret;
+		}
+
+		inline virtual size_t numElement() { return 3; }
+		inline virtual double getElement(int idx)
+		{
+			switch(idx) {
+				case 0:
+				return x_;
+				case 1:
+				return y_;
+				case 2:
+				return z_;
+				otherwise:
+				assert(0);
+				break;
+			}
+			return 0.0;
+		}
+
+		inline virtual void setElement(int idx, double val)
+		{
+			switch(idx) {
+				case 0:
+				x_ = val;
+				break;
+				case 1:
+				y_ = val;
+				break;
+				case 2:
+				z_ = val;
+				break;
+				otherwise:
+				assert(0);
+				break;
+			}
+		}
+
 		// get cv:::Mat representation
 		inline virtual cv::Mat getMatrix() {
 			cv::Mat ret(3, 1, CV_64F);
-
 			ret.at<double>(0, 0) = x_;
 			ret.at<double>(1, 0) = y_;
 			ret.at<double>(2, 0) = z_;
-
 			return ret;
 		}
-#if 0
-		inline virtual btVector3 getBtVector3()
-		{
-			return btVector3(x_, y_, z_);
-		}
-#endif
-		inline double getX() { return x_; }
-		inline double getY() { return y_; }
-		inline double getZ() { return z_; }
-		inline double getTS() { return timesec_; }
-		inline double getConfidence() { return confidence_; }
 
-		inline void setX(const double &x) { x_ = x; }
-		inline void setY(const double &y) { y_ = y; }
-		inline void setZ(const double &z) { z_ = z; }
-		inline void setTS(const double &ts) { timesec_ = ts; }
-		inline void setConfidence(const double &confidence) { confidence_ = confidence; }
 	protected:
 		double x_;
 		double y_;
 		double z_;
-		double timesec_;
-		double confidence_;
 	};
-#if 0
-	class PeopleStateVel;
-	typedef boost::shared_ptr<PeopleStateVel> PeopleStateVelPtr;
-	class PeopleStateVel
+
+	class ObjectStateVel: public ObjectState
 	{
 	public:
-		PeopleStateVel():x_(0.0), y_(0.0), z_(0.0),vx_(0.0),vy_(0.0),vz_(0.0),timesec_(0.0),confidence_(0.0){};
-		virtual ~PeopleStateVel() {};
-
-		// copy state
-		inline virtual void copyTo(PeopleStateVelPtr dst)
+		ObjectStateVel():x_(0.0), y_(0.0), z_(0.0),vx_(0.0),vy_(0.0),vz_(0.0),ObjectState()
 		{
-			dst->x_ = x_;
-			dst->y_ = y_;
-			dst->z_ = z_;
-			dst->vx_ = vx_;
-			dst->vy_ = vy_;
-			dst->vz_ = vz_;
-			dst->timesec_ = timesec_;
-			dst->confidence_ = confidence_;
-		}
-	
-		// clone state
-		inline virtual PeopleStateVelPtr clone() 
-		{
-			PeopleStateVelPtr ret = boost::make_shared<PeopleStateVel>(PeopleStateVel());
-			copyTo(ret);
-			return ret;
-		}
-
-		// for debug, show state
-		inline virtual void print()
-		{
-			std::cout << "ts : " << setprecision(6) << timesec_ - floor(timesec_ / 10000) * 10000 << std::endl;
-			std::cout << "loc  : [ x : " << x_ << " y : " << y_<< " z : " << z_ << "]" <<std::endl;
-			std::cout << "vel  : [ vx : " << vx_ << " vy : " << vy_<< " vz : " << vz_ << "]" <<std::endl;
-			std::cout << "conf : " << confidence_ << std::endl;
-		}
-
-		// get cv:::Mat representation
-		inline virtual cv::Mat getMatrix() {
-			cv::Mat ret(6, 1, CV_64F);
-
-			ret.at<double>(0, 0) = x_;
-			ret.at<double>(1, 0) = y_;
-			ret.at<double>(2, 0) = z_;
-			ret.at<double>(3, 0) = vx_;
-			ret.at<double>(4, 0) = vy_;
-			ret.at<double>(5, 0) = vz_;
-
-			return ret;
-		}
-
-		inline virtual PeopleStateVelPtr predict(double timesec)
-		{
-			PeopleStateVelPtr ret = clone();
-
-			ret->x_ = ret->x_ + ret->vx_ * (timesec - timesec_);
-			ret->y_ = ret->y_ + ret->vy_ * (timesec - timesec_);
-			ret->z_ = ret->z_ + ret->vz_ * (timesec - timesec_);
-
-			ret->timesec_ = timesec;
-
-			return ret;
-		}
-
-		inline double getX() { return x_; }
-		inline double getY() { return y_; }
-		inline double getZ() { return z_; }
-		inline double getVX() { return vx_; }
-		inline double getVY() { return vy_; }
-		inline double getVZ() { return vz_; }
-		inline double getTS() { return timesec_; }
-		inline double getConfidence() { return confidence_; }
-
-		inline void setX(const double &x) { x_ = x; }
-		inline void setY(const double &y) { y_ = y; }
-		inline void setZ(const double &z) { z_ = z; }
-		inline void setVX(const double &vx) { vx_ = vx; }
-		inline void setVY(const double &vy) { vy_ = 0.0; /*vy;*/ } // no velocity on y direction (vertical)
-		inline void setVZ(const double &vz) { vz_ = vz; }
-		inline void setTS(const double &ts) { timesec_ = ts; }
-		inline void setConfidence(const double &confidence) { confidence_ = confidence; }
-	protected:
-		double x_;
-		double y_;
-		double z_;
-		double vx_;
-		double vy_;
-		double vz_;
-		double timesec_;
-		double confidence_;
-	};
-#else
-	class ObjStateVel;
-	typedef boost::shared_ptr<ObjStateVel> ObjStateVelPtr;
-	class ObjStateVel
-	{
-	public:
-		ObjStateVel():x_(0.0), y_(0.0), z_(0.0),vx_(0.0),vy_(0.0),vz_(0.0),timesec_(0.0),confidence_(0.0),obj_type_(ObjPerson),sub_type_(0){
 			obj_type_ = g_objtype;
+			state_type_ = "object_location_velocity";
 		};
-		
-		ObjStateVel(ObjectType type):x_(0.0), y_(0.0), z_(0.0),vx_(0.0),vy_(0.0),vz_(0.0),timesec_(0.0),confidence_(0.0),obj_type_(type),sub_type_(0){ };
 
-		virtual ~ObjStateVel() {};
+		virtual ~ObjectStateVel() {};
 
 		// copy state
-		inline virtual void copyTo(ObjStateVelPtr dst)
+		inline virtual void copyTo(ObjectStatePtr dst)
 		{
-			dst->x_ = x_;
-			dst->y_ = y_;
-			dst->z_ = z_;
-			dst->vx_ = vx_;
-			dst->vy_ = vy_;
-			dst->vz_ = vz_;
-			dst->timesec_ = timesec_;
-			dst->confidence_ = confidence_;
+			dst->setElement(0, x_);
+			dst->setElement(1, y_);
+			dst->setElement(2, z_);
+			dst->setElement(3, vx_);
+			dst->setElement(4, vy_);
+			dst->setElement(5, vz_);
+
+			dst->setTS(timesec_);
+			dst->setConfidence(confidence_);
 		}
 	
 		// clone state
-		inline virtual ObjStateVelPtr clone() 
+		inline virtual ObjectStatePtr clone() 
 		{
-			ObjStateVelPtr ret = boost::make_shared<ObjStateVel>(ObjStateVel());
+			ObjectStatePtr ret(new ObjectStateVel);
 			copyTo(ret);
 			return ret;
 		}
@@ -271,6 +210,96 @@ namespace people {
 			std::cout << "loc  : [ x : " << x_ << " y : " << y_<< " z : " << z_ << "]" <<std::endl;
 			std::cout << "vel  : [ vx : " << vx_ << " vy : " << vy_<< " vz : " << vz_ << "]" <<std::endl;
 			std::cout << "conf : " << confidence_ << std::endl;
+		}
+
+		inline virtual ObjectStatePtr predict(double timesec)
+		{
+			ObjectStatePtr ret = clone();
+			double dt = timesec - timesec_;
+			assert(dt >= 0);
+			for(size_t i = 0 ; i < 3; i++) { // x, y, z
+				ret->setElement(0, ret->getElement(i) + ret->getElement(i + 3) * dt);
+			}
+			// ret->setElement(0, x_ + vx_ * (timesec - timesec_));
+			// ret->setElement(1, y_ + vy_ * (timesec - timesec_));
+			// ret->setElement(2, z_ + vz_ * (timesec - timesec_));
+			ret->setTS(timesec);
+
+			return ret;
+		}
+
+		// draw a new sample
+		inline virtual ObjectStatePtr drawSample(double timesec, const std::vector<double> &params)
+		{
+			ObjectStatePtr ret = clone();
+			// random sampling
+			double dt = timesec - timesec_; // uncertainty over time
+			assert(dt > 0);
+			double temp;
+			for(size_t i = 0 ; i < 6; i++) {
+				temp = ret->getElement(i) + g_rng.gaussian(params[i] * dt);
+				ret->setElement(i, temp);
+			}
+			return ret->predict(timesec);
+		}
+
+		// draw a new sample
+		inline virtual ObjectStatePtr perturbState(const std::vector<double> &params, double c = 1.0)
+		{
+			ObjectStatePtr ret = clone();
+			// random sampling
+			double temp;
+			for(size_t i = 0 ; i < 6; i++) {
+				temp = ret->getElement(i) + c * g_rng.gaussian(params[i]);
+				ret->setElement(i, temp);
+			}
+			return ret;
+		}
+
+		// draw a new sample
+		virtual double computeLogPrior(ObjectStatePtr state, double timesec, const std::vector<double> &params)
+		{
+			double ret = 0, dt = timesec - timesec_;
+			assert(dt > 0);
+
+			double temp = 0;
+			for(size_t i = 0 ; i < 3; i++) { // x, y, z
+				// x - dt * vx
+				temp = getElement(i) - dt * (getElement(i + 3));
+				ret += log_gaussian_prob(temp, state->getElement(i), params[i] * dt);
+			}
+			for(size_t i = 3 ; i < 6; i++) { // vx, vy, vz
+				ret += log_gaussian_prob(getElement(i), state->getElement(i), params[i] * dt);
+			}
+			return ret;
+		}
+
+		inline virtual size_t numElement() { return 6; }
+		inline virtual double getElement(int idx)
+		{
+			switch(idx) {
+				case 0:	return x_;			break;
+				case 1:	return y_;			break;
+				case 2:	return z_;			break;
+				case 3:	return vx_;			break;
+				case 4:	return vy_;			break;
+				case 5:	return vz_;			break;
+				otherwise:	assert(0);	break;
+			}
+			return 0.0;
+		}
+
+		inline virtual void setElement(int idx, double val)
+		{
+			switch(idx) {
+				case 0:	x_ = val;	break;
+				case 1:	y_ = val;	break;
+				case 2:	z_ = val;	break;
+				case 3:	vx_ = val;	break;
+				case 4:	vy_ = val;	break;
+				case 5:	vz_ = val;	break;
+				otherwise: assert(0);	break;
+			}
 		}
 
 		// get cv:::Mat representation
@@ -286,43 +315,6 @@ namespace people {
 
 			return ret;
 		}
-
-		inline virtual ObjStateVelPtr predict(double timesec)
-		{
-			ObjStateVelPtr ret = clone();
-
-			ret->x_ = ret->x_ + ret->vx_ * (timesec - timesec_);
-			ret->y_ = ret->y_ + ret->vy_ * (timesec - timesec_);
-			ret->z_ = ret->z_ + ret->vz_ * (timesec - timesec_);
-
-			ret->timesec_ = timesec;
-
-			return ret;
-		}
-
-		inline double getX() { return x_; }
-		inline double getY() { return y_; }
-		inline double getZ() { return z_; }
-		inline double getVX() { return vx_; }
-		inline double getVY() { return vy_; }
-		inline double getVZ() { return vz_; }
-		inline double getTS() { return timesec_; }
-		inline double getConfidence() { return confidence_; }
-
-		inline void setX(const double &x) { x_ = x; }
-		inline void setY(const double &y) { y_ = y; }
-		inline void setZ(const double &z) { z_ = z; }
-		inline void setVX(const double &vx) { vx_ = vx; }
-		inline void setVY(const double &vy) { vy_ = 0.0; /*vy;*/ } // no velocity on y direction (vertical)
-		inline void setVZ(const double &vz) { vz_ = vz; }
-		inline void setTS(const double &ts) { timesec_ = ts; }
-		inline void setConfidence(const double &confidence) { confidence_ = confidence; }
-		
-		void setObjType(ObjectType type) { obj_type_ = type; }
-		ObjectType getObjType() { return obj_type_; }
-
-		void setSubType(int type) { sub_type_ = type; }
-		int getSubType() { return sub_type_; }
 	protected:
 		double x_;
 		double y_;
@@ -330,26 +322,6 @@ namespace people {
 		double vx_;
 		double vy_;
 		double vz_;
-		double timesec_;
-		double confidence_;
-
-		ObjectType 	obj_type_;
-		int			sub_type_;
 	};
-#endif
-#ifdef VEL_STATE
-	// typedef PeopleStateVel PeopleState;
-	// typedef PeopleStateVelPtr PeopleStatePtr;
-	typedef ObjStateVel PeopleState;
-	typedef ObjStateVelPtr PeopleStatePtr;
-#define get_vel_factor(frames) (4 - (double)min(frames, 6) / 2)
-// #define get_vel_factor(frames) 1 
-// #define get_vel_factor(frames) (frames == 1) ? 10.0 : 1.0
-// #define get_vel_factor(frames) 15.0 / ((double)min(frames, 10) + 5)
-#else
-	typedef PeopleStateLoc PeopleState;
-	typedef PeopleStateLocPtr PeopleStatePtr;
-#endif
 };
-
 #endif // _PED_STATE_H_

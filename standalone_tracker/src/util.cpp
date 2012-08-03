@@ -32,8 +32,45 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <common/util.h>
+#include <common/global.h>
+#include <common/ped_state.h>
+#include <common/gfeat_state.h>
+#include <common/cam_state.h>
 
 namespace people{
+#if 0
+	ObjectStatePtr createObjectState()
+	{
+		ObjectStatePtr ret;
+		switch(g_obj_state_type_) {
+			case ObjectStateTypeObjectLoc: return ObjectStatePtr(new ObjectStateLoc); break;
+			case ObjectStateTypeObjectVel: return ObjectStatePtr(new ObjectStateVel); break;
+			otherwise: assert(0); break;
+		}
+		return ret;
+	}
+
+	FeatureStatePtr createFeatureState()
+	{
+		FeatureStatePtr ret;
+		switch(g_feat_state_type) {
+			case FeatureStateTypeStatic: return FeatureStatePtr(new StaticFeatureState); break;
+			otherwise: assert(0); break;
+		}
+		return ret;
+	}
+
+	CameraStatePtr createCameraState()
+	{
+		CameraStatePtr ret;
+		switch(g_cam_state_type_) {
+			case CameraStateTypeSimplified: return CameraStatePtr(new SimplifiedCameraState); break;
+			case CameraStateTypePinhole: assert(0); break;
+			otherwise: assert(0); break;
+		}
+		return ret;
+	}
+#endif
 	void show_image(cv::Mat &im, const std::string &name, int max_height)
 	{
 		cv::Size imsz(im.cols, im.rows);
@@ -93,52 +130,32 @@ namespace people{
 		return ret;
 	}
 
-	double gaussian_prob(double x, double m, double std)
+	double state_ground_dist(ObjectStatePtr a, ObjectStatePtr b)
 	{
-		double var = std * std;
-		return 1 / sqrt(2 * M_PI * var) * exp(- pow(x - m, 2) / (2 * var));
+		return sqrt(pow(a->getElement(0) - b->getElement(0), 2) + 
+								pow(a->getElement(2) - b->getElement(2), 2));
 	}
 
-	double log_gaussian_prob(double x, double m, double std)
+	double state_dist(ObjectStatePtr a, ObjectStatePtr b)
 	{
-		return -log(sqrt(2 * M_PI) * std) - ( pow((x - m) / std, 2) / 2.0 );
-	}
-	
-	double log_gaussian_prob(cv::Mat &x, cv::Mat& m, cv::Mat &icov, double det)
-	{
-		my_assert(x.rows == m.rows);
-		my_assert(x.rows == icov.cols);
-		
-		cv::Mat dx = x - m;
-		cv::Mat temp = ( (dx.t() * icov) * dx  / 2.0 );
-		
-		my_assert(temp.rows == 1 && temp.cols == 1);
-
-		double ret =  - x.rows * log(2 * M_PI) / 2 
-			   - log(det) / 2  - temp.at<double>(0, 0);
-
-		return ret;
+		return sqrt(pow(a->getElement(0) - b->getElement(0), 2) 
+								+ pow(a->getElement(1) - b->getElement(1), 2) 
+								+ pow(a->getElement(2) - b->getElement(2), 2));
 	}
 
-	double state_ground_dist(PeopleStatePtr a, PeopleStatePtr b)
+	double feat_state_dist(FeatureStatePtr a, FeatureStatePtr b)
 	{
-		return sqrt(pow(a->getX() - b->getX(), 2) + pow(a->getZ() - b->getZ(), 2));
-	}
-
-	double state_dist(PeopleStatePtr a, PeopleStatePtr b)
-	{
-		return sqrt(pow(a->getX() - b->getX(), 2) + pow(a->getY() - b->getY(), 2) + pow(a->getZ() - b->getZ(), 2));
-	}
-
-	double feat_state_dist(GFeatStatePtr a, GFeatStatePtr b)
-	{
-		assert(a->getY() == 0.0); assert(b->getY() == 0.0);
-		return sqrt(pow(a->getX() - b->getX(), 2) + pow(a->getY() - b->getY(), 2) + pow(a->getZ() - b->getZ(), 2));
+		assert(a->getElement(1) == 0.0); assert(b->getElement(1) == 0.0);
+		return sqrt(pow(a->getElement(0) - b->getElement(0), 2) 
+							+ pow(a->getElement(1) - b->getElement(1), 2) 
+							+ pow(a->getElement(2) - b->getElement(2), 2));
 	}
 #ifdef VEL_STATE
-	double state_ground_vel_diff(PeopleStatePtr a, PeopleStatePtr b)
+	double state_ground_vel_diff(ObjectStatePtr a, ObjectStatePtr b)
 	{
-		return sqrt(pow(a->getVX() - b->getVX(), 2) + pow(a->getVZ() - b->getVZ(), 2));
+		return sqrt(pow(a->getElement(3) - b->getElement(3), 2) + 
+								pow(a->getElement(5) - b->getElement(5), 2));
+		// return sqrt(pow(a->getVX() - b->getVX(), 2) + pow(a->getVZ() - b->getVZ(), 2));
 	}
 #endif
 	void getPairIndex(unsigned int min_idx, unsigned int max_idx, unsigned int &pair_index)

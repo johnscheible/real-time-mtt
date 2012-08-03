@@ -22,7 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHEIGHT_PRIOR")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHORIZON_EST")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DET_RESPONSE")
 add_library(tracker src/assignmentoptimal.cpp src/target_manager.cpp src/rjmcmc_proposal.cpp src/rjmcmc_tracker.cpp src/meanshiftTracker.cpp src/PriorDist.cpp src/util.cpp src/global.cpp)
-add_library(observation src/ObservationManager.cpp src/FaceNode.cpp src/SkinNode.cpp src/roihog.cpp src/HOGNode.cpp src/DetectionReadinNode.cpp src/FeatTracker.cpp src/vpestimator.cpp src/global.cpp)
+add_library(observation src/ObservationManager.cpp src/FaceNode.cpp src/SkinNode.cpp src/DetectionReadinNode.cpp src/FeatTracker.cpp src/vpestimator.cpp src/global.cpp)
 
 add_executable(ptrack src/people_tracker.cpp)  
 target_link_libraries(ptrack tracker observation)

@@ -32,15 +32,43 @@
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
 
+#include <opencv/cv.h>
 namespace people {
+	// random value generator
+	extern cv::RNG		g_rng;
+
 	typedef enum {
 		ObjNone = -1,
 		ObjPerson,
 		ObjCar,
 		ObjTypeNum,
 	}ObjectType;
-	
 	extern ObjectType g_objtype;
+#if 0
+	typedef enum {
+		ObjectStateTypeObjectLoc = 0,
+		ObjectStateTypeObjectVel,
+		ObjectStateTypeNum,
+	}ObjectStateType;
+	extern ObjectStateType g_obj_state_type_;
+
+	typedef enum {
+		FeatureStateTypeStatic = 0,
+		FeatureStateTypeNum,
+	}FeatureStateType;
+	extern FeatureStateType g_feat_state_type_;
+
+	typedef enum {
+		CameraStateTypeSimplified = 0,
+		CameraStateTypePinhole,
+		CameraStateTypeNum,
+	}CameraStateType;
+	extern CameraStateType g_cam_state_type_;
+#endif
+
+	double gaussian_prob(double x, double m, double std);
+	double log_gaussian_prob(double x, double m, double std);
+	double log_gaussian_prob(cv::Mat &x, cv::Mat& m, cv::Mat &icov, double det);
 };
 
 #endif

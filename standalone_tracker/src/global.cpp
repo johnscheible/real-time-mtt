@@ -30,6 +30,45 @@
  */
 
 #include <common/global.h>
+#include <common/util.h>
 namespace people {
+	cv::RNG	g_rng((double)time(NULL));
 	ObjectType g_objtype = ObjPerson;
+
+	// ObjectStateType g_obj_state_type_ = ObjectStateTypeObjectVel;
+	// FeatureStateType g_feat_state_type_ = FeatureStateTypeStatic;
+	// CameraStateType g_cam_state_type_ = CameraStateTypeSimplified;
+
+	double gaussian_prob(double x, double m, double std)
+	{
+		double var = std * std;
+
+		if(std == 0) return 1.0;
+
+		return 1 / sqrt(2 * M_PI * var) * exp(- pow(x - m, 2) / (2 * var));
+	}
+
+	double log_gaussian_prob(double x, double m, double std)
+	{
+		if(std == 0) return 0.0; // no effect!
+		return -log(sqrt(2 * M_PI) * std) - ( pow((x - m) / std, 2) / 2.0 );
+	}
+	
+	double log_gaussian_prob(cv::Mat &x, cv::Mat& m, cv::Mat &icov, double det)
+	{
+		my_assert(x.rows == m.rows);
+		my_assert(x.rows == icov.cols);
+		
+		cv::Mat dx = x - m;
+		cv::Mat temp = ( (dx.t() * icov) * dx  / 2.0 );
+		
+		my_assert(temp.rows == 1 && temp.cols == 1);
+
+		double ret =  - x.rows * log(2 * M_PI) / 2 
+			   - log(det) / 2  - temp.at<double>(0, 0);
+
+		return ret;
+	}
+
+
 };

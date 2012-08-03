@@ -132,7 +132,6 @@ void DetectionReadinNode::quaryData(const std::string &name, void *data)
 void DetectionReadinNode::preprocess()
 {
 	assert(readDetectionResult(conf_file_));
-	// dbgShowConfImage(confidences_[10]);
 }
 
 void DetectionReadinNode::dbgShowConfImage(DetectionReadinConfidence &conf)
@@ -142,18 +141,6 @@ void DetectionReadinNode::dbgShowConfImage(DetectionReadinConfidence &conf)
 
 	float minval = 100000000.0f;
 	float maxval = -10000000.0f;
-#if 0
-	for(int i = 0; i < conf.map_.rows; i++) {
-		for(int j = 0; j < conf.map_.cols; j++) {
-			if(minval > conf.map_.at<float>(i, j)) {
-				minval = conf.map_.at<float>(i, j);
-			}
-			if(maxval < conf.map_.at<float>(i, j)) {
-				maxval = conf.map_.at<float>(i, j);
-			}
-		}
-	}
-#endif
 	minval = -5;
 	maxval = 5;
 
@@ -289,36 +276,9 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 		}
 	}
 #ifdef USE_DET_RESPONSE
-#if 0
-	std::vector<cv::Rect> found2 = found_;
-	std::vector<double> resps;
-
-	cv::groupRectangles(found2, 1, 0.2);
-	for(size_t i = 0; i < found2.size(); i ++) {
-		for(size_t j = 0; j < found_.size(); j++) {
-
-			if(found_[j].x == found2[i].x && 
-				found_[j].y == found2[i].y &&
-				found_[j].width == found2[i].width &&
-				found_[j].height == found2[i].height) {
-				
-				resps.push_back(max( responses_[j], 0.0 ) );
-
-				break;
-			}
-			assert(j != found_.size() - 1);
-		}
-	}
-	found_ = found2;
-	responses_ = resps;
-
-	std::cout << found_.size() << " " << resps.size() << std::endl; 
-	assert(found_.size() == responses_.size());
-#endif
 #else
 	cv::groupRectangles(found_, 1, 0.2);
 #endif
-
 	nread = fread(&nums, sizeof(unsigned int), 1, fp);
 	assert(nread == 1);
 	// float prev_size = 0.0;
@@ -366,14 +326,11 @@ std::vector<cv::Rect> DetectionReadinNode::getDetections()
 	return found_;
 }
 
-/*
-*/
 double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 {
 	double overlap = 0.0; // detectionOberlap(rt);
-#ifdef USE_DET_RESPONSE
-	// weight_  = 0.5;
 	int idx = 0;
+
 	overlap = getMinDist2Dets(found_, idx, rt, det_std_x_, det_std_y_, det_std_h_);
 	if(overlap < 4.0) { // within range
 		if(obj_type_ == ObjPerson)
@@ -384,11 +341,7 @@ double DetectionReadinNode::getConfidence(const cv::Rect &rt, double depth)
 	else { // too far
 		overlap = 0.0;
 	}
-#else
-	overlap = std::max(4.0 - getMinDist2Dets(found_, rt, det_std_x_, det_std_y_, det_std_h_), 0.0) * 1 / 2;
-#endif
-	// overlap = getDist2AllDets(found_, rt, det_std_x_, det_std_y_, det_std_h_, 4.0) * 1 / 2;
-	// overlap = getOverlap2AllDets(found_, rt, 0.4) * 2 / 0.6;
+
 	if(version_ == 3) {
 		if(rt.height > 180) {
 			return -10.0;
