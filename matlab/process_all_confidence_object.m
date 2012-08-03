@@ -1,8 +1,17 @@
-function process_all_confidence_object(imdir, outdir, name, obank_dir, ext)
-if nargin < 3
-    obank_dir = './object_bank';
+function process_all_confidence_object(imdir, outdir, name)
+ext = 'png';
+
+obank_dir = './object_bank';
+if ~exist(obank_dir, 'dir')
+    system('wget http://vision.stanford.edu/projects/objectbank/MATLAB_release.zip; unzip MATLAB_release.zip -d object_bank; rm MATLAB_release.zip');
 end
 addpath(genpath(obank_dir));
+
+%% load person model
+dpm_dir = 'voc-release3.1';
+if ~exist(dpm_dir, 'dir')
+    system('wget http://www.cs.brown.edu/~pff/latent-release3/voc-release3.1.tgz; tar xvf voc-release3.1.tgz; rm voc-release3.1.tgz');
+end
 
 if ~strcmp(name, 'INRIA')
     data = load(['./voc-release3.1/VOC2008/' name '_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
@@ -16,7 +25,7 @@ if ~exist(outdir, 'dir')
 	mkdir(outdir);
 end
 
-matlabpool open 8
+matlabpool open
 files = dir([imdir '/*.' ext]);
 for idx = 1:16:length(files)
     parfor j = 1:16
