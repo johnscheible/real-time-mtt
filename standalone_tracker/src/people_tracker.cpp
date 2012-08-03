@@ -663,7 +663,7 @@ void draw_confidence_map(ObservationManager *mgr, double height, CamStatePtr mca
 #endif
 }
 
-void draw_detections(ObservationManager *mgr, cv::Mat &image_color)
+cv::Mat draw_detections(ObservationManager *mgr, cv::Mat &image_color)
 {
 	// visualization
 	cv::Mat image = image_color.clone();
@@ -681,6 +681,7 @@ void draw_detections(ObservationManager *mgr, cv::Mat &image_color)
 	cv::imshow("detection", image);
 	cv::waitKey(30);
 #endif
+	return image;
 }
 
 cv::Mat draw_targets(TargetManager &manager, cv::Mat &image_color, double timestamp, bool bshow = true)
@@ -827,6 +828,7 @@ int main (int ac, char** av)
 	cv::VideoWriter video_samples;
 	cv::VideoWriter video_feature;
 	cv::VideoWriter video_camera;
+	cv::VideoWriter video_dets;
 
 	double fps = params.fps;
 	if(params.out_vid != "") {
@@ -844,6 +846,10 @@ int main (int ac, char** av)
 		fname = params.out_vid + "_feature.avi";
 		if(!video_feature.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(image_color.cols , image_color.rows), true))
 		my_assert(video_feature.isOpened());
+
+		fname = params.out_vid + "_dets.avi";
+		if(!video_dets.open(fname, CV_FOURCC('X','V','I','D'), fps, cv::Size(image_color.cols , image_color.rows), true))
+		my_assert(video_dets.isOpened());
 	}
 	///////////////////////////////////////////////////////////////
 	TargetManager		target_manager;
@@ -990,7 +996,12 @@ int main (int ac, char** av)
 		target_manager.getProposals(dets, image_color, proposal_rts); // using overlap between bbs
 		tracker.setData(mgr, proposal_rts);
 		/////////////////////////////////////////////////////////////////////////////////////////////////
-		if(params.showimg) draw_detections(mgr, image_color);
+		if(params.showimg) {
+			cv::Mat image_dets = draw_detections(mgr, image_color);
+			if(video_dets.isOpened()) {
+				video_dets << image_dets;
+			}
+		}
 		if(params.showimg) {
 			cv::Mat votemap = mgr->getVPEstimator()->getVPConfImage(600);
 			cv::imshow("vote", votemap);

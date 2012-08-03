@@ -82,7 +82,7 @@ DetectionReadinNode::DetectionReadinNode()
 	//
 	obj_type_ = g_objtype; // ObjPerson;
 	if(obj_type_ == ObjPerson)		pos_threshold_ = 0.0;
-	else if(obj_type_ == ObjCar)	pos_threshold_ = -0.75;
+	else if(obj_type_ == ObjCar)	pos_threshold_ = -0.85;
 	else							assert(0);
 
 	init();
@@ -197,8 +197,9 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 
 	std::cout << "read " << filename << std::endl;
 	fp = fopen(filename.c_str(), "r");
-	if(fp == NULL) {
+	if(fp < 0) {
 		std::cout << "ERROR :Cannot read detection confidence file!" << std::endl;
+		exit(1);
 		fclose(fp);
 		return false;
 	}
