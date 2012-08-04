@@ -366,14 +366,6 @@ SampleInfo	RJMCMCProposal::stayTarget(MCMCSamplePtr sample)
 		rt.y += g_rng.gaussian(det_sigma_y_ * rt.height);
 		rt.height += g_rng.gaussian(det_sigma_h_ * rt.height);
 		state = sample->getCameraState()->iproject(rt);
-#if 0 // def VEL_STATE
-		TargetDistPtr target = prev_dist_->getTarget(ret.idx_);
-		ObjectStatePtr prev_mean = target->getMean();
-
-		state->setVX(prev_mean->getVX());
-		state->setVY(0.0);
-		state->setVZ(prev_mean->getVZ());
-#endif
 		// std::cout << "det driven!" << std::endl;
 		state->setTS(timestamp_);
 	}
@@ -451,59 +443,7 @@ SampleInfo RJMCMCProposal::updateTarget(MCMCSamplePtr sample)
 		dt = 1.0/20;
 	}
 	ret.obj_state_ = sample->getObjectState(ret.idx_)->perturbState(obj_pert_params_, dt);
-#if 0
-#ifdef VEL_STATE
-	state = sample->getState(ret.idx_)->clone();
-	if(ret.idx_ < (unsigned int)prev_dist_->getNumObjects()) { 
-		// perturb velocity
-		double dt = timestamp_ - prev_dist_->getTimeStamp();
-		TargetDistPtr target = prev_dist_->getTarget(ret.idx_);
-		int frames = target->getFrames();
 
-		double vel_factor = get_vel_factor(frames);
-		double dx = g_rng.gaussian(pert_sigma_x_ * dt); 
-		double dy = g_rng.gaussian(pert_sigma_y_ * dt); 
-		double dz = g_rng.gaussian(pert_sigma_z_ * dt);
-		double dvx = g_rng.gaussian(pert_sigma_vx_ * dt * vel_factor ); 
-		double dvz = g_rng.gaussian(pert_sigma_vz_ * dt * vel_factor );
-		// z += A * dz : equal to N(0, ASA')
-
-		double temp;
-		temp = state->getX() + dx + dvx * dt; state->setX(temp);
-		temp = state->getY() + dy; 			  state->setY(temp);
-		temp = state->getZ() + dz + dvz * dt; state->setZ(temp);
-		temp = state->getVX() + dvx; state->setVX(temp);
-		temp = state->getVZ() + dvz; state->setVZ(temp);
-
-		state->setTS(timestamp_);
-	}
-	else { // newly entered, no previous time information
-		double temp;
-#if 1
-		temp = state->getX() + g_rng.gaussian(0.025); state->setX(temp);
-		temp = state->getY() + g_rng.gaussian(0.05); state->setY(temp);
-		temp = state->getZ() + g_rng.gaussian(0.05); state->setZ(temp);
-#else
-		temp = state->getX() + g_rng.gaussian(pert_sigma_x_ * dt); state->setX(temp);
-		temp = state->getY() + g_rng.gaussian(pert_sigma_y_ * dt); state->setY(temp);
-		temp = state->getZ() + g_rng.gaussian(pert_sigma_z_ * dt); state->setZ(temp);
-#endif
-		// state->x_ += g_rng.gaussian(det_sigma_x_ / 2);
-		// state->y_ += g_rng.gaussian(det_sigma_y_ / 2);
-		// state->z_ += g_rng.gaussian(det_sigma_z_ / 2);
-		state->setTS(timestamp_);
-	}
-#else
-	state = sample->getState(ret.idx_)->clone();
-
-	double temp;
-	temp = state->getX() + g_rng.gaussian(sigma_x_); state->setX(temp);
-	temp = state->getY() + g_rng.gaussian(sigma_y_);	state->setY(temp);
-	temp = state->getZ() + g_rng.gaussian(sigma_z_); state->setZ(temp);
-	state->setTS(timestamp_);
-#endif
-	ret.state_ = state;
-#endif
 	return ret;
 }
 
@@ -516,22 +456,6 @@ SampleInfo RJMCMCProposal::updateCamera(MCMCSamplePtr sample)
 		dt = 1.0/20;
 	}
 	ret.cam_state_ = sample->getCameraState()->perturbState(cam_pert_params_, dt);
-#if 0
-	// see updateTarget for reference
-	double dx, dz;
-	dx = -ret.cam_state_->getV() * sin(ret.cam_state_->getYaw()) * dt;
-	dz = ret.cam_state_->getV() * cos(ret.cam_state_->getYaw()) * dt;
-	double temp;
-	temp = ret.cam_state_->getYaw() + g_rng.gaussian(pert_cam_sigma_yaw_ * dt); ret.cam_state_->setYaw(temp);
-	temp = ret.cam_state_->getV() + g_rng.gaussian(pert_cam_sigma_v_ * dt); ret.cam_state_->setV(temp);
-	temp = ret.cam_state_->getHorizon() + g_rng.gaussian(pert_cam_sigma_horizon_ * dt); ret.cam_state_->setHorizon(temp);
-	// dt * vx, dt * vz
-	// add location perturbation + go back to previous time location
-	temp = ret.cam_state_->getX() + g_rng.gaussian(pert_cam_sigma_x_ * dt) - dx; ret.cam_state_->setX(temp);
-	temp = ret.cam_state_->getZ() + g_rng.gaussian(pert_cam_sigma_z_ * dt) - dz; ret.cam_state_->setZ(temp);
-	ret.cam_state_->setTS(prev_dist_->getTimeStamp());
-	ret.cam_state_ = ret.cam_state_->predict(timestamp_);
-#endif
 	return ret;
 }
 

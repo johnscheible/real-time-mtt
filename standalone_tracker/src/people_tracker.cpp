@@ -682,12 +682,7 @@ cv::Mat draw_detections(ObservationManager *mgr, cv::Mat &image_color)
 	for(size_t j = 0; j < dets.size(); j++) {
 		cv::rectangle(image, dets[j].tl(), dets[j].br(), cv::Scalar(0, 0, 150), thickline);
 	}
-#if 1
 	show_image(image, "detection", 600);
-#else
-	cv::imshow("detection", image);
-	cv::waitKey(30);
-#endif
 	return image;
 }
 
@@ -695,13 +690,9 @@ cv::Mat draw_targets(TargetManager &manager, cv::Mat &image_color, double timest
 {
 	cv::Mat image = manager.drawTargets(image_color, timestamp);
 	if(bshow) { 
-#if 1
 		show_image(image, "targets", 600);
-#else
-		cv::imshow("targets", image);
-#endif
 	}
-/*
+#if 0
 	image = image_color.clone();
 	std::vector<cv::Rect> rts = manager.getMSRects();
 	std::vector<float> sims = manager.getMSSims();
@@ -716,7 +707,7 @@ cv::Mat draw_targets(TargetManager &manager, cv::Mat &image_color, double timest
 
 	cv::imshow("mean_shift", image);
 	cv::waitKey(30);
-*/
+#endif
 	return image;
 }
 
@@ -788,21 +779,11 @@ cv::Mat draw_samples(PosteriorDistPtr dist, cv::Mat &image_color, bool bshow = t
 	}
 
 	if(bshow) {
-#if 1
 		show_image(image, "samples", 600);
-#else
-		cv::imshow("samples", image);
-		cv::waitKey(30);
-#endif
 	}
 
 	if(bshow) {
-#if 1
 		show_image(image_top, "top view", 600);
-#else
-		cv::imshow("top view", image_top);
-		cv::waitKey(30);
-#endif
 	}
 
 	return image;
@@ -968,7 +949,6 @@ int main (int ac, char** av)
 	
 	// initialize the first frame camera
 	CameraStatePtr init_cam(new SimplifiedCameraState<ObjectStateVel,StaticFeatureState>);
-#if 1
 	init_cam->setElement(0, params.init_cam_focal);
 	init_cam->setElement(1, params.init_cam_xcenter);
 	init_cam->setElement(2, params.init_cam_x);
@@ -977,11 +957,7 @@ int main (int ac, char** av)
 	init_cam->setElement(5, params.init_cam_yaw);
 	init_cam->setElement(6, params.init_cam_v);
 	init_cam->setElement(7, params.init_cam_horizon);
-#else
-	init_cam->set(params.init_cam_x,	params.init_cam_y, params.init_cam_z,
-				params.init_cam_v,	params.init_cam_yaw, params.init_cam_horizon,
-				params.init_cam_focal, params.init_cam_xcenter,	0.0);
-#endif
+
 	tracker.setInitialCamera(init_cam);
 	// feat_tracker.showImage(true);
 	mgr->setData((void*)&feat_tracker, "feat_tracker");
@@ -1017,18 +993,6 @@ int main (int ac, char** av)
 		// process detector
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		mgr->preprocess();
-#if 0
-		CameraStatePtr temptemp = boost::make_shared<CamState>();
-		temptemp->set(params.init_cam_x,	params.init_cam_y, params.init_cam_z,
-					params.init_cam_v,	params.init_cam_yaw, params.init_cam_horizon,
-					params.init_cam_focal, params.init_cam_xcenter,	0.0);
-		for(int iii = 1; iii < 2000; iii++) {
-			temptemp->setHorizon(iii);
-			std::cout << mgr->getCameraConfidence(temptemp)	<< setprecision(4) << " ";
-		}
-		std::cout << std::endl;
-		return 0;
-#endif
 		// run/set meanshift data
 		target_manager.runMeanShift(image_color);
 		tracker.setMeanShiftData(target_manager.getMSRects(), target_manager.getMSSims());
@@ -1110,22 +1074,7 @@ int main (int ac, char** av)
 
 		tracker.filterFeatures(remove_idx);
 		target_manager.updateCamera(mean_cam);
-#if 0
-		//
-		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getHorizon(), 0.0);
-		cv::circle(frame, pt, 20, cv::Scalar(0, 0, 255), 10);
-		std::vector<longline> lines = mgr->getVPEstimator()->getAllLines();
-		for(size_t k = 0; k < lines.size(); k++) {
-			cv::line(frame, cv::Point(lines[k].x1_, lines[k].y1_), cv::Point(lines[k].x2_, lines[k].y2_), cv::Scalar(0, 255, 0), frame.cols / 500);
-		}
-		lines = mgr->getVPEstimator()->getLinesIntersectingPoint(pt);
-		for(size_t k = 0; k < lines.size(); k++) {
-			cv::line(frame, cv::Point(lines[k].x1_, lines[k].y1_), cv::Point(lines[k].x2_, lines[k].y2_), cv::Scalar(0, 0, 255), frame.cols / 200);
-		}
-		if(params.showimg) {
-			show_image(frame, "VP", 600);
-		}
-#endif
+
 		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getElement(7), 0.0);
 		target_manager.updateLines(mgr->getVPEstimator()->getAllLines(), mgr->getVPEstimator()->getLinesIntersectingPoint(pt), timesec);
 		/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1142,13 +1091,11 @@ int main (int ac, char** av)
 		if(video_samples.isOpened()) {
 			video_samples << frame;
 		}
-#if 1
+
 		if(i % 50 == 49) {
 			target_manager.saveAll(params.out_dir);
 		}
-#else
-		cv::waitKey();
-#endif
+
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 	}
 	target_manager.saveAll(params.out_dir);

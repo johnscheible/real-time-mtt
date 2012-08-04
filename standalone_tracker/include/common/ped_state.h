@@ -220,9 +220,6 @@ namespace people {
 			for(size_t i = 0 ; i < 3; i++) { // x, y, z
 				ret->setElement(i, ret->getElement(i) + ret->getElement(i + 3) * dt);
 			}
-			// ret->setElement(0, x_ + vx_ * (timesec - timesec_));
-			// ret->setElement(1, y_ + vy_ * (timesec - timesec_));
-			// ret->setElement(2, z_ + vz_ * (timesec - timesec_));
 			ret->setTS(timesec);
 
 			return ret;

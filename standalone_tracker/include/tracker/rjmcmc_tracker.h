@@ -345,32 +345,6 @@ namespace people {
 				for(size_t i = 0; i < new_feat_cache_.size(); i++) {
 					ret += (double)(new_feat_cache_[i] - feat_cache_[i]);
 				}
-				//std::cout << " feats : " << ret ;
-#if 0 // def HORIZON_EST
-				// horizon observation using detections!!!
-				{
-					std::vector<int> votes;
-					std::vector<double> std;
-					CameraStatePtr cam = sample->getCameraState();
-					obs_mgr_->getHorizonVotes(votes, std, cam->getY());
-					// std::cout << "confidence : " << ret << std::endl;
-					for(size_t i = 0; i < votes.size(); i++) {
-						double new_dist = votes[i] - info.cam_state_->getHorizon();
-						double old_dist = votes[i] - cam->getHorizon();
-						ret += - min(pow(new_dist / std[i], 2), 9.0);
-						ret -= - min(pow(old_dist / std[i], 2), 9.0);
-						//std::cout << "vote " << votes[i] << " " ;
-						//print_rect(dets[i]);
-						//std::cout << "new_dist : " << new_dist << " " ;
-						//info.cam_state_->print();
-						//std::cout << "old_dist : " << old_dist << " " ;
-						//cam->print();
-					}
-					//std::cout << "confidence : " << ret << std::endl;
-					//cv::waitKey();
-					//std::cout << " horizon : " << ret ;
-				}
-#endif
 				ret += obs_mgr_->getCameraConfidence(info.cam_state_) - obs_mgr_->getCameraConfidence(sample->getCameraState());
 
 				my_assert(!isnan(ret));
