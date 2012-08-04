@@ -670,7 +670,7 @@ void draw_confidence_map(ObservationManager *mgr, double height, CameraStatePtr 
 }
 #endif
 
-cv::Mat draw_detections(ObservationManager *mgr, cv::Mat &image_color)
+cv::Mat draw_detections(ObservationManager *mgr, cv::Mat &image_color, bool bshow = true)
 {
 	// visualization
 	cv::Mat image = image_color.clone();
@@ -682,7 +682,9 @@ cv::Mat draw_detections(ObservationManager *mgr, cv::Mat &image_color)
 	for(size_t j = 0; j < dets.size(); j++) {
 		cv::rectangle(image, dets[j].tl(), dets[j].br(), cv::Scalar(0, 0, 150), thickline);
 	}
-	show_image(image, "detection", 600);
+	if(bshow)
+		show_image(image, "detection", 600);
+
 	return image;
 }
 
@@ -1003,11 +1005,9 @@ int main (int ac, char** av)
 		target_manager.getProposals(dets, image_color, proposal_rts); // using overlap between bbs
 		tracker.setData(mgr, proposal_rts);
 		/////////////////////////////////////////////////////////////////////////////////////////////////
-		if(params.showimg) {
-			cv::Mat image_dets = draw_detections(mgr, image_color);
-			if(video_dets.isOpened()) {
-				video_dets << image_dets;
-			}
+		cv::Mat image_dets = draw_detections(mgr, image_color, params.showimg);
+		if(video_dets.isOpened()) {
+			video_dets << image_dets;
 		}
 		if(params.showimg) {
 			cv::Mat votemap = mgr->getVPEstimator()->getVPConfImage(600);
