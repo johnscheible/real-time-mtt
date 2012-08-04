@@ -38,39 +38,6 @@
 #include <common/cam_state.h>
 
 namespace people{
-#if 0
-	ObjectStatePtr createObjectState()
-	{
-		ObjectStatePtr ret;
-		switch(g_obj_state_type_) {
-			case ObjectStateTypeObjectLoc: return ObjectStatePtr(new ObjectStateLoc); break;
-			case ObjectStateTypeObjectVel: return ObjectStatePtr(new ObjectStateVel); break;
-			otherwise: assert(0); break;
-		}
-		return ret;
-	}
-
-	FeatureStatePtr createFeatureState()
-	{
-		FeatureStatePtr ret;
-		switch(g_feat_state_type) {
-			case FeatureStateTypeStatic: return FeatureStatePtr(new StaticFeatureState); break;
-			otherwise: assert(0); break;
-		}
-		return ret;
-	}
-
-	CameraStatePtr createCameraState()
-	{
-		CameraStatePtr ret;
-		switch(g_cam_state_type_) {
-			case CameraStateTypeSimplified: return CameraStatePtr(new SimplifiedCameraState); break;
-			case CameraStateTypePinhole: assert(0); break;
-			otherwise: assert(0); break;
-		}
-		return ret;
-	}
-#endif
 	void show_image(cv::Mat &im, const std::string &name, int max_height)
 	{
 		cv::Size imsz(im.cols, im.rows);
@@ -150,14 +117,14 @@ namespace people{
 							+ pow(a->getElement(1) - b->getElement(1), 2) 
 							+ pow(a->getElement(2) - b->getElement(2), 2));
 	}
-#ifdef VEL_STATE
+
 	double state_ground_vel_diff(ObjectStatePtr a, ObjectStatePtr b)
 	{
 		return sqrt(pow(a->getElement(3) - b->getElement(3), 2) + 
 								pow(a->getElement(5) - b->getElement(5), 2));
 		// return sqrt(pow(a->getVX() - b->getVX(), 2) + pow(a->getVZ() - b->getVZ(), 2));
 	}
-#endif
+
 	void getPairIndex(unsigned int min_idx, unsigned int max_idx, unsigned int &pair_index)
 	{
 		assert(min_idx < max_idx);

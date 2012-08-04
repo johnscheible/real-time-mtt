@@ -93,27 +93,7 @@ void FeatTracker::setNewImage(cv::Mat &image, double timestamp)
 	prev_timestamp_ = current_timestamp_;
 	current_timestamp_ = timestamp;
 }
-/*
-void FeatTracker::get_features(double timestamp, std::vector<cv::Point2f> &pts, std::vector<int> &index)
-{
-	index.clear();
-	pts.clear();
 
-	// naive implementation... maybe too slow if there are too many features?
-	// loop over tracks
-	for(size_t i = 0; i < feat_tracks_.size(); i++) {
-		imfeat_track track = feat_tracks_[i];
-		// loop over timestamp
-		for(size_t j = 0; j < track.feats_.size(); j++) {
-			if(track.feats_[j].timestamp_ == timestamp) {
-				pts.push_back(track.feats_[j].pt_);
-				index.push_back(i);
-				break;
-			}
-		}
-	}
-}
-*/
 void FeatTracker::get_features(double timestamp, std::vector<cv::Point2f> &pts, std::vector<float> &responses, std::vector<int> &index)
 {
 	index.clear();

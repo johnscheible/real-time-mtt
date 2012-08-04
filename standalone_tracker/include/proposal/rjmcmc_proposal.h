@@ -147,28 +147,7 @@ namespace people {
 		double					det_sigma_x_;
 		double					det_sigma_y_;
 		double					det_sigma_h_;
-#if 0
-		double					motion_sigma_x_;
-		double					motion_sigma_y_;
-		double					motion_sigma_z_;
-		double					motion_sigma_vx_;
-		// double					motion_sigma_vy_;
-		double					motion_sigma_vz_;
 
-		double					pert_sigma_x_;
-		double					pert_sigma_y_;
-		double					pert_sigma_z_;
-		double					pert_sigma_vx_;
-		// double					pert_sigma_vy_;
-		double					pert_sigma_vz_;
-		double					pert_cam_sigma_x_;
-		double					pert_cam_sigma_z_;
-		double					pert_cam_sigma_yaw_;
-		double					pert_cam_sigma_v_;
-		double					pert_cam_sigma_horizon_;
-		double					pert_feat_sigma_x_;
-		double					pert_feat_sigma_z_;
-#endif
 		double					prob_interaction_flip_;
 		int							min_frames_group_;
 	};

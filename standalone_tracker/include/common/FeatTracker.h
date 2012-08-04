@@ -45,14 +45,12 @@ namespace people {
 		cv::Point2f		pt_;
 		double			timestamp_;
 	}imfeat;
-#if 1
+
 	typedef struct _imfeat_track {
 		std::vector<imfeat> feats_;
 		float 	response_;
 	}imfeat_track;
-#else
-	typedef std::vector<imfeat> imfeat_track;
-#endif
+
 	class FeatTracker
 	{
 	public:

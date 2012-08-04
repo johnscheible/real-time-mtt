@@ -67,9 +67,6 @@ namespace people {
 
 		// for debugging
 		virtual void print_all_cache(const SampleInfo &info, MCMCSamplePtr sample);
-#if 0 // def VEL_STATE
-		virtual void initMotionParameters();
-#endif
 	protected:
 		virtual void computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid);
 	protected:
@@ -210,11 +207,6 @@ namespace people {
 
 		// parameters
 		std::vector<double> camera_motion_params_;
-		//double camera_motion_sigma_x_;
-		//double camera_motion_sigma_z_;
-		//double camera_motion_sigma_yaw_;
-		//double camera_motion_sigma_v_;
-		//double camera_motion_sigma_horizon_;
 		
 		double prob_feat_enter_;
 		double prob_feat_stay_;

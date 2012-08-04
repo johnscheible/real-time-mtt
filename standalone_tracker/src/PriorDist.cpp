@@ -36,88 +36,6 @@
 
 using namespace people;
 
-#if 0 // def VEL_STATE
-void PriorDist::initMotionParameters()
-{
-	size_t nTargets = prev_dist_->getNumTargets();
-	double dt = timestamp_ - prev_dist_->getTimeStamp();
-	cv::Mat A = cv::Mat::eye(5, 5, CV_64F);
-	cv::Mat Sigma = cv::Mat::eye(5, 5, CV_64F);
-	cv::Mat temp;
-
-	Sigma.at<double>(0, 0) = pow(motion_sigma_x_ * dt, 2);
-	Sigma.at<double>(1, 1) = pow(motion_sigma_y_ * dt, 2);
-	Sigma.at<double>(2, 2) = pow(motion_sigma_z_ * dt, 2);
-	A.at<double>(0, 3) = dt; A.at<double>(2, 4) = dt;
-
-	motion_sigma_invs_.clear();
-	motion_sigma_dets_.clear();
-
-	for(size_t i = 0; i < nTargets; i++) {
-		TargetDistPtr target = prev_dist_->getTargetDist(i);
-		int frames = target->getFrames();
-		double vel_factor = get_vel_factor(frames);
-
-		// more variance for less tracked targets
-		Sigma.at<double>(3, 3) = pow(motion_sigma_vx_ * dt * vel_factor, 2);
-		Sigma.at<double>(4, 4) = pow(motion_sigma_vz_ * dt * vel_factor, 2);
-
-		// A * Sigma * A'
-		temp = A * Sigma;
-		temp = temp * A.t();
-		
-		motion_sigma_invs_.push_back(temp.inv());
-		motion_sigma_dets_.push_back(cv::determinant(temp));
-#if 0 // def MYDEBUG
-		char msg[1000];
-
-		for(int j = 0; j < (int)prev_dist_->getNumSamples(); j++) {
-			sprintf(msg, "target %d %dth state\n [", (int)i, j);
-			print_dbg_file(msg);
-			
-			MCMCSamplePtr sample = prev_dist_->getSample(j);
-			ObjectStatePtr state = sample->getObjectState(i);
-			if(state.get() == NULL)
-				continue;
-
-			cv::Mat sm = state->getMatrix();
-			for(int j = 0; j < 6; j++) {
-				sprintf(msg, "%.5lf\t", sm.at<double>(j, 0));
-				print_dbg_file(msg);
-			}
-
-			sprintf(msg, "]\n");
-			print_dbg_file(msg);
-		}
-
-		sprintf(msg, "target %d covariance!\n", (int)i);
-		print_dbg_file(msg);
-		for(int j = 0; j < 6; j++) {
-			for(int k = 0; k < 6; k++) {
-				sprintf(msg, "%.8lf\t", temp.at<double>(j, k));
-				print_dbg_file(msg);
-			}
-			sprintf(msg, "\n");
-			print_dbg_file(msg);
-		}
-
-		sprintf(msg, "target %d det(cov) : %lf!\n", (int)i, cv::determinant(temp));
-		print_dbg_file(msg);
-#endif
-#if 0
-		std::cout << "target " << i << " covariance!" << std::endl;
-		for(int j = 0; j < 6; j++) {
-			for(int k = 0; k < 6; k++) {
-				std::cout << setprecision(5) << temp.at<double>(j, k) << "\t";
-			}
-			std::cout << std::endl;
-		}
-		assert(0);
-#endif
-	}
-}
-#endif
-
 void PriorDist::setParameters(const std::string &name, const std::string &value)
 {
 	if (name == "MotionSigmaX")
@@ -179,19 +97,8 @@ void PriorDist::computeNewSampletMotionPrior(const SampleInfo &info)
 
 				if(prev_sample->getObjectExistance(info.idx_)) {
 					ObjectStatePtr prev_state = prev_sample->getObjectState(info.idx_);
-					// std::cout << "dt " << dt << "sigma_x " << motion_sigma_x_ << std::endl;
-					// stay
-#ifdef VEL_STATE
 					// didn't implemented
 					assert(0);
-#else
-					double dt = timestamp_ - prev_state->timesec_;
-					one_target_motion_cache_.at<double>(i, 0) = prob_stay_ // stay prob
-					 	* gaussian_prob(state->x_, prev_state->x_, motion_sigma_x_ * dt) // location prob
-					 	* gaussian_prob(state->y_, prev_state->y_, motion_sigma_y_ * dt)
-					 	* gaussian_prob(state->z_, prev_state->z_, motion_sigma_z_ * dt);
-					//std::cout << one_target_motion_cache_.at<double>(i, 0) << ", ";
-#endif
 				}
 				else {
 					// new enter
@@ -248,18 +155,8 @@ void PriorDist::computeOneTargetMotionPrior(MCMCSamplePtr sample, int tid)
 
 				if(prev_sample->getObjectExistance(tid)) {
 					ObjectStatePtr prev_state = prev_sample->getObjectState(tid);
-					// std::cout << "dt " << dt << "sigma_x " << motion_sigma_x_ << std::endl;
-					// stay
-#ifdef VEL_STATE
+					// didn't implemented
 					assert(0);
-#else
-					double dt = timestamp_ - prev_state->timesec_;
-					one_target_motion_cache_.at<double>(i, 0) = prob_stay_ // stay prob
-					 	* gaussian_prob(state->x_, prev_state->x_, motion_sigma_x_ * dt) // location prob
-					 	* gaussian_prob(state->y_, prev_state->y_, motion_sigma_y_ * dt)
-					 	* gaussian_prob(state->z_, prev_state->z_, motion_sigma_z_ * dt);
-#endif
-					// std::cout << one_target_motion_cache_.at<double>(i, 0) << ", ";
 				}
 				else {
 					// new enter
@@ -341,11 +238,8 @@ double PriorDist::computeLogMotionPrior(const SampleInfo &info)
 
 // necessary to balance the motion prior
 // without this, the location prior won't have any effect when it's farther than 1 sigma from the mean
-#ifdef VEL_STATE
+
 #define PROB_ENTER_CONST	-2000.0f
-#else
-#define PROB_ENTER_CONST	-50.0f
-#endif
 
 void PriorDistNS::computeNewSampletMotionPrior(const SampleInfo &info)
 {
@@ -961,7 +855,6 @@ void PriorDistInteract::computeNewInteractionModePrior(const SampleInfo &info)
 
 double PriorDistInteract::computePairwiseInteractionPotential(ObjectStatePtr state1, ObjectStatePtr state2, bool isgroup)
 {
-#ifdef VEL_STATE
 	my_assert(state1.get() && state2.get());
 	double dist = state_ground_dist(state1, state2);
 	
@@ -996,11 +889,6 @@ double PriorDistInteract::computePairwiseInteractionPotential(ObjectStatePtr sta
 #endif
 		return -1 / ( repulsion_const_ * dist ); // new sample
 	}
-#else
-		// clean up the code..
-		assert(0);
-		return -1000000000000;
-#endif
 }
 
 double PriorDistInteract::computeInteractionPotential(const SampleInfo &info, MCMCSamplePtr sample)

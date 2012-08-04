@@ -408,51 +408,13 @@ namespace people {
 
 		return ret;
 	}
-/*
-	double ObservationManager::getDepthFromState(PeopleStatePtr state, CamStatePtr cam_state)
-	{
-		btVector3 pt3;
-		pt3[ 0 ] = state->x_; 	pt3[ 1 ] = state->y_;		pt3[ 2 ] = state->z_;
-		btMatrix3x3 cam_rot = cam_state->getRot();
-		btVector3 cam_trans = cam_state->getTrans();
-		// get point in camera co-ordinate
-		pt3 = cam_rot.inverse() * (pt3 - cam_trans);
-		// get point in camera co-ordinate
-		// pt3 = ref_to_cam_rot_ * pt3 + ref_to_cam_trans_;
-		return pt3[ 2 ];
-	}
-
-	bool ObservationManager::debug_check_projections(PeopleStatePtr state)
-	{
-		CamStatePtr cam = getInitialCamera(true);
-
-		std::cout << "org " << state->x_ << ", " << state->y_ << ", " << state->z_ << std::endl;
-
-		cv::Rect rt1 = getRectFromState(state, cam);
-		cv::Rect rt2 = ObservationManager::getRectFromState(state);
-
-		std::cout << "new projection : " << rt1.x << ", " << rt1.y << ", " << rt1.width << ", " << rt1.height << std::endl;
-		std::cout << "old projection : " << rt2.x << ", " << rt2.y << ", " << rt2.width << ", " << rt2.height << std::endl;
-		
-		PeopleStatePtr temp1 = getPeopleStateFromRect(rt1, cam);
-		PeopleStatePtr temp2 = ObservationManager::getStateFromRect(rt2);
-		
-		std::cout << "temp1 " << temp1->x_ << ", " << temp1->y_ << ", " << temp1->z_ << std::endl;
-		std::cout << "temp2 " << temp2->x_ << ", " << temp2->y_ << ", " << temp2->z_ << std::endl;
-
-		return (rt1.x == rt2.x)
-				& (rt1.y == rt2.y)
-				& (rt1.width == rt2.width)
-				& (rt1.height == rt2.height);
-	}
-*/
 
 	void ObservationManager::getHorizonVotes(std::vector<int> &votes, std::vector<double> &stds, double camh)
 	{
 		std::vector<cv::Rect> dets = getDetections();
 		votes.clear();
 		stds.clear();
-#ifdef HORIZON_EST
+
 		double mh, stdh;
 		if(obj_type_ == ObjPerson) {
 			mh = MEAN_PERSON_HEIGHT;
@@ -469,7 +431,6 @@ namespace people {
 			votes.push_back( dets[i].y + round((double)dets[i].height * (mh - camh) / mh) );
 			stds.push_back((double)dets[i].height / mh * stdh);
 		}
-#endif
 	}
 #if 0
 	cv::Mat	ObservationManager::getPeopleConfidenceMap(double y, CamStatePtr cam_state, std::string type)

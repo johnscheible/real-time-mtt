@@ -340,36 +340,7 @@ namespace people {
 		{
 			int idx = floor(g_rng.uniform((double)0.0f, (double)samples_.size() - EPS));
 			assert(motion_params_[0] > 0.0);
-#if 0
-#ifdef VEL_STATE
-			assert(0);
-			ret = samples_[idx]->clone();
-			double dt = timestamp - ret->getTS(); // uncertainty over time
-			double vel_factor = get_vel_factor(nframes_);
-
-			// not gonna allow x_
-			double temp;
-			temp = ret->getX() + rng_.gaussian(sigma_x_ * dt);			ret->setX(temp);
-			temp = ret->getY() + rng_.gaussian(sigma_y_ * dt); 			ret->setY(temp);
-			temp = ret->getZ() + rng_.gaussian(sigma_z_ * dt); 			ret->setZ(temp);
-			temp = ret->getVX() + rng_.gaussian(sigma_vx_ * dt * vel_factor);			ret->setVX(temp);
-			temp = ret->getVY() + rng_.gaussian(sigma_vy_ * dt * vel_factor); 		ret->setVY(temp);
-			temp = ret->getVZ() + rng_.gaussian(sigma_vz_ * dt * vel_factor); 		ret->setVZ(temp);
-			
-			ret = ret->predict(timestamp);
-#else
-			ret = samples_[idx]->clone();
-			double dt = timestamp - ret->getTS(); // uncertainty over time
-			double temp;
-			temp = ret->getX() + rng_.gaussian(sigma_x_ * dt);			ret->setX(temp);
-			temp = ret->getY() + rng_.gaussian(sigma_y_ * dt); 			ret->setY(temp);
-			temp = ret->getZ() + rng_.gaussian(sigma_z_ * dt); 			ret->setZ(temp);
-			ret->setTS(timestamp);
-#endif
-			return ret;
-#else
 			return samples_[idx]->drawSample(timesec, motion_params_);
-#endif
 		};
 
 		virtual double getSampleProbability(ObjectStatePtr state, double timesec)
@@ -527,13 +498,11 @@ namespace people {
 	{
 	public:
 		PosteriorDist()
-		// :sigma_x_(0.01),sigma_y_(0.01),sigma_z_(0.01),sigma_vx_(5),sigma_vy_(5),sigma_vz_(1)
 		{
 			initialize();
 		}
 
 		PosteriorDist(const std::vector<double> &obj_motion_params, const std::vector<double> &feat_motion_params, const std::vector<double> &cam_motion_params)
-		//double sigma_x, double sigma_y, double sigma_z, double sigma_vx, double sigma_vy, double sigma_vz):sigma_x_(sigma_x),sigma_y_(sigma_y),sigma_z_(sigma_z),sigma_vx_(sigma_vx),sigma_vy_(sigma_vy),sigma_vz_(sigma_vz) 
 		{
 			obj_motion_params_ = obj_motion_params;
 			feat_motion_params_ = feat_motion_params;
@@ -629,56 +598,6 @@ namespace people {
 			}
 #ifdef _DEBUG
 			std::cout << "sampling done" << std::endl;
-#endif
-#if 0
-#ifdef VEL_STATE
-			// fake sample to put zero velocity prior for static targets
-			MCMCSamplePtr sample = boost::make_shared<MCMCSample>(MCMCSample());
-			std::vector<ObjectStatePtr> states;
-			std::vector<bool> exists;
-
-			for(int i = 0; i < (int)targets_.size(); i++) {
-				ObjectStatePtr state = targets_[i]->getMean()->clone();
-				state->setVX(0.0);
-				state->setVY(0.0); 
-				state->setVZ(0.0);
-
-				states.push_back(state);
-				exists.push_back(true);
-			}
-
-			sample->setStates(states, exists);
-			std::vector< std::vector<bool> > group_interaction;
-			for(unsigned int i = 0; i < targets_.size(); i++) {
-				std::vector<bool> one_col;
-				for(unsigned int j = 0; j < i; j++) {
-					one_col.push_back(false); // by default no group interaction
-				}
-				group_interaction.push_back(one_col);
-			}
-			sample->setInteractionMode(group_interaction);
-#ifdef CAM_EST
-			if(samples_[0]->getCamState().get()) { // if it's not a fake initialization
-				CameraStatePtr cam = getMeanCamera();
-				sample->setCamState(cam);
-			}
-
-			std::vector<bool> feat_validities;
-			std::vector<FeatureStatePtr> feat_states;
-			for(int i = 0; i < getNumFeats(); i++) {
-				double val = getMeanFeatValidity(i);
-				FeatureStatePtr feat = getMeanFeature(i);
-
-				feat_validities.push_back(val > 0.5);
-				feat_states.push_back(feat);
-			}
-			sample->setGFeatStates(feat_states, feat_validities);
-#endif
-			samples_.push_back(sample);	
-#endif
-#ifdef _DEBUG
-			std::cout << "sampling done" << std::endl;
-#endif
 #endif
 		};
 		
