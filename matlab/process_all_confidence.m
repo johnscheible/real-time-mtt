@@ -6,11 +6,11 @@ if ~exist(obank_dir, 'dir')
 end
 addpath(genpath(obank_dir));
 %% load person model
-dpm_dir = 'voc-release3.1';
-if ~exist(dpm_dir, 'dir')
-    system('wget http://www.cs.brown.edu/~pff/latent-release3/voc-release3.1.tgz; tar xvf voc-release3.1.tgz; rm voc-release3.1.tgz');
-end
-modelfile = 'voc-release3.1/INRIA/inria_final.mat';
+%dpm_dir = 'voc-release3.1';
+%if ~exist(dpm_dir, 'dir')
+%    system('wget http://www.cs.brown.edu/~pff/latent-release3/voc-release3.1.tgz; tar xvf voc-release3.1.tgz; rm voc-release3.1.tgz');
+%end
+modelfile = 'vocmodel/INRIA/inria_final.mat';
 load(modelfile);
 
 % only upright standing person

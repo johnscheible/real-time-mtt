@@ -8,15 +8,14 @@ end
 addpath(genpath(obank_dir));
 
 %% load person model
-dpm_dir = 'voc-release3.1';
-if ~exist(dpm_dir, 'dir')
-    system('wget http://www.cs.brown.edu/~pff/latent-release3/voc-release3.1.tgz; tar xvf voc-release3.1.tgz; rm voc-release3.1.tgz');
-end
-
+%dpm_dir = 'voc-release3.1';
+%if ~exist(dpm_dir, 'dir')
+%    system('wget http://www.cs.brown.edu/~pff/latent-release3/voc-release3.1.tgz; tar xvf voc-release3.1.tgz; rm voc-release3.1.tgz');
+%end
 if ~strcmp(name, 'INRIA')
-    data = load(['./voc-release3.1/VOC2008/' name '_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
+    data = load(['./vocmodel/VOC2008/' name '_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
 else
-    data = load(['./voc-release3.1/INRIA/inria_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
+    data = load(['./vocmodel/INRIA/inria_final.mat']); %voc-release3.1/VOC2008/person_final.mat');
 end
 
 model = data.model;
