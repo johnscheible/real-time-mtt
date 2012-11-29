@@ -58,7 +58,7 @@ namespace people {
 	class ObjectState
 	{
 	public:
-		ObjectState():timesec_(0.0),confidence_(0.0) {};
+		ObjectState():timesec_(0.0),confidence_(0.0),sub_type_(0) {};
 		virtual ~ObjectState() {};
 
 		// copy state

@@ -364,6 +364,7 @@ namespace people {
 				}
 				mean_->setTS(0.0);
 				mean_->setConfidence(0.0);
+				mean_->setSubType(0);
 				return;
 			}
 			

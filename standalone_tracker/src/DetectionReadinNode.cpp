@@ -266,6 +266,10 @@ bool DetectionReadinNode::readDetectionResult(const std::string filename)
 		}
 	}
 
+	std::cout << "=== pre-nms : " << found_.size();
+	nms(found_, responses_);
+	std::cout << " post-nms : " << found_.size() << std::endl;
+
 	nread = fread(&nums, sizeof(unsigned int), 1, fp);
 	assert(nread == 1);
 

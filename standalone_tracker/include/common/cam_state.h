@@ -257,6 +257,8 @@ namespace people {
 					rt.width = rt.height / WH_CAR_RATIO1;
 				}
 				else {
+					state->print();
+					printf("%d\n", state->getSubType() );
 					assert(0);
 				}
 			}

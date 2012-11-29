@@ -43,6 +43,9 @@ namespace people {
 	bool inrect(const cv::Rect &rt, const cv::Point2f &pt);
 
 	float bb_overlap(const cv::Rect& rt1, const cv::Rect& rt2);
+	float bb_intunion(const cv::Rect& rt1, const cv::Rect& rt2);
+
+	void nms(std::vector<cv::Rect>& bbs, std::vector<double>& confs);
 
 	double state_ground_dist(ObjectStatePtr a, ObjectStatePtr b); // x-z distance
 	double state_dist(ObjectStatePtr a, ObjectStatePtr b);
