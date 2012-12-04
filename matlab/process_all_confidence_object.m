@@ -24,11 +24,17 @@ if ~exist(outdir, 'dir')
 	mkdir(outdir);
 end
 
-matlabpool open
+try
+    matlabpool open
+end
+
 files = dir([imdir '/*.' ext]);
 for idx = 1:16:length(files)
     parfor j = 1:16
         i = idx + j - 1;
+        if(i > length(files))
+            continue;
+        end
         
         filename = [imdir '/' files(i).name];
         conf_file = [outdir '/' files(i).name(1:end-4) '.conf'];
