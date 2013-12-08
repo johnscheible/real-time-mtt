@@ -75,7 +75,7 @@ namespace people {
 				case 5:	return yaw_;	break;
 				case 6:	return v_;	break;
 				case 7:	return horizon_;	break;
-				otherwise: assert(0);	break;
+				default: assert(0);	break;
 			}
 		}
 
@@ -90,7 +90,7 @@ namespace people {
 				case 5:	yaw_ = val;	break;
 				case 6:	v_ = val;	break;
 				case 7:	horizon_ = val;	break;
-				otherwise: assert(0);	break;
+				default: assert(0);	break;
 			}
 		}
 

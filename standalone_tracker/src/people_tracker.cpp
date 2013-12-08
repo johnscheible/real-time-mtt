@@ -34,6 +34,7 @@
 #include <stdint.h>
 // observation
 #include <observation/ObservationNode.h>
+#include <observation/BlobNode.h>
 #include <observation/DetectionReadinNode.h>
 #include <observation/FaceNode.h>
 #include <observation/SkinNode.h>
@@ -563,7 +564,9 @@ ObservationManager *createManager()
 	ObservationManager *mgr = new ObservationManager;
 	ObservationNode *node;
 
-	node = new DetectionReadinNode;
+	// node = new DetectionReadinNode;
+	// mgr->insertObservationNode(node);
+	node = new BlobNode;
 	mgr->insertObservationNode(node);
 #if 0
 	if(true) {
