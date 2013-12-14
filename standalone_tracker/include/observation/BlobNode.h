@@ -33,6 +33,7 @@
 #define _BLOB_NODE_H_
 
 #include <observation/ObservationNode.h>
+#include <unordered_map>
 
  namespace people {
   class BlobNode : public ObservationNode 
@@ -61,6 +62,7 @@
     // detections
     std::vector<cv::Rect> found_;
     std::vector<double> responses_;
+	std::unordered_map<const cv::Rect*,double> confidence_;
 
     // parameters
     double hit_threshold_;

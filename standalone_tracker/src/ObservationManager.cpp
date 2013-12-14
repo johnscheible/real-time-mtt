@@ -403,7 +403,7 @@ namespace people {
 					+ log_gaussian_prob(1.4 * gfeat_sigma_v_, 0.0, gfeat_sigma_v_);
 		}
 		// remove features with nan 
-		if(isnan(ret)) return -100.0f;
+		if(std::isnan(ret)) return -100.0f;
 		my_assert(!isnan(ret));
 
 		return ret;

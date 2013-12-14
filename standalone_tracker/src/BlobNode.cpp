@@ -199,7 +199,7 @@ bool BlobNode::detectBlobs()
 
 			cv::Rect r(topLeft.x, topLeft.y, width, height);
 			found_.push_back(r);
-			responses_.push_back(kp.response);
+			confidence_[&(found_.back())] = kp.response;
 		}
 	}
 
@@ -213,8 +213,8 @@ std::vector<cv::Rect> BlobNode::getDetections()
 
 //TODO
 double BlobNode::getConfidence(const cv::Rect &rt, double depth)
-{
-	return 0.0;
+{		
+	return confidence_[&rt];
 	// double overlap = 0.0; // detectionOberlap(rt);
 	// int idx = 0;
 
