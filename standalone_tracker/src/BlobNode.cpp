@@ -64,7 +64,17 @@ BlobNode::BlobNode()
 
 	default_detector_ = cv::FeatureDetector::create("MSER");
 	default_detector_->set("minArea", 100);
-	thresh_vals = {123,32,218,188,256,256,60,30,134,89,150,256};
+	thresh_vals.push_back(123);
+	thresh_vals.push_back(32);
+	thresh_vals.push_back(218);
+	thresh_vals.push_back(188);
+	thresh_vals.push_back(256);
+	thresh_vals.push_back(60);
+	thresh_vals.push_back(30);
+	thresh_vals.push_back(134);
+	thresh_vals.push_back(89);
+	thresh_vals.push_back(150);
+	thresh_vals.push_back(256);
 
 	init();
 }
@@ -148,13 +158,15 @@ bool BlobNode::detectBlobs()
 	// Initialize variables.
 	cv::Mat hsv, blur, thresholded, thresholdedb, thresholdedr, frameBot;
 	//Only consider the bottom half of the image.
-	frameBot = color.rowRange(Range((int)(color_image->rows/2), color_image->rows));
+	frameBot = color_image_->cv::Mat::rowRange(cv::Range((int)((color_image_->rows)/2), color_image_->rows));
 	//Convert the image to HSV.
-	cvtColor(frameBot, hsv, CV_BGR2HSV);
+	cv::cvtColor(frameBot, hsv, CV_BGR2HSV);
 	//Threshold the image to help track the balls.
-	inRange(hsv, cv::Scalar(thresh_vals[0], thresh_vals[1], thresh_vals[2]), cv::Scalar(thresh_vals[3], thresh_vals[4], thresh_vals[5]), thresholdedb);
-	inRange(hsv, cv::Scalar(thresh_vals[6], thresh_vals[7], thresh_vals[8]), cv::Scalar(thresh_vals[9], thresh_vals[10], thresh_vals[11]),thresholdedr);
-	bitwise_or(thresholded,rthresh,thresholded);
+	cv::inRange(hsv, cv::Scalar(thresh_vals[0], thresh_vals[1], thresh_vals[2]), 
+			cv::Scalar(thresh_vals[3], thresh_vals[4], thresh_vals[5]), thresholdedb);
+	cv::inRange(hsv, cv::Scalar(thresh_vals[6], thresh_vals[7], thresh_vals[8]), 
+			cv::Scalar(thresh_vals[9], thresh_vals[10], thresh_vals[11]), thresholdedr);
+	cv::bitwise_or(thresholdedb,thresholdedr,thresholded);
 	//Blur the image to improve detection results.
 	GaussianBlur(thresholded, blur, cv::Size(9, 9), 3, 3);
 
