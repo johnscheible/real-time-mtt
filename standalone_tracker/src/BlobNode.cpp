@@ -64,7 +64,17 @@ BlobNode::BlobNode()
 
 	default_detector_ = cv::FeatureDetector::create("MSER");
 	default_detector_->set("minArea", 100);
-	min_thresh_ = 230;
+	thresh_vals.push_back(123);
+	thresh_vals.push_back(32);
+	thresh_vals.push_back(218);
+	thresh_vals.push_back(188);
+	thresh_vals.push_back(256);
+	thresh_vals.push_back(60);
+	thresh_vals.push_back(30);
+	thresh_vals.push_back(134);
+	thresh_vals.push_back(89);
+	thresh_vals.push_back(150);
+	thresh_vals.push_back(256);
 
 	init();
 }
@@ -81,8 +91,6 @@ void BlobNode::setParameter(const std::string &name, const std::string &value)
 		det_scale_ = boost::lexical_cast<double>(value);
 	else if(name == "blob_threshold")
 		hit_threshold_ = boost::lexical_cast<double>(value);
-	else if(name == "blob_detector_threshold")
-		min_thresh_ = boost::lexical_cast<int>(value);
 	else if(name == "blob_detector_area")
 		default_detector_->set("minArea", boost::lexical_cast<int>(value));
 	else if(name == "detection_std_x")
@@ -121,18 +129,20 @@ void BlobNode::preprocess()
 
 bool BlobNode::supress(std::vector<cv::KeyPoint>& keypoints,
 	                     cv::KeyPoint& query) {
+	bool ret = false;
 	for (std::vector<cv::KeyPoint>::iterator kpi = keypoints.begin(),
 		   kpe = keypoints.end(); kpi != kpe; ++kpi) {
 		cv::KeyPoint kp = *kpi;
 		int distx = kp.pt.x - query.pt.x;
 		int disty = kp.pt.y - query.pt.y;
-		int dist = sqrt(distx * distx + disty * disty);
-		if (kp.size > query.size && dist < kp.size / 2) {
-			return true;
+		int dist = sqrt(distx*distx + disty*disty);
+		if(query.size > kp.size && (dist < kp.size)){
+			query.response++;
+		} else if((kp.size > query.size) && (dist < kp.size)) {
+			ret = true;
 		}
 	}
-
-	return false;
+	return ret;
 }
 
 bool BlobNode::detectBlobs()
@@ -146,9 +156,18 @@ bool BlobNode::detectBlobs()
 	found_.clear();
 
 	// Initialize variables.
-	cv::Mat hsv, blur, thresholded;
-	cvtColor(*color_image_, hsv, CV_BGR2HSV);
-	inRange(hsv, cv::Scalar(0, 0, min_thresh_), cv::Scalar(256, 256, 256), thresholded);
+	cv::Mat hsv, blur, thresholded, thresholdedb, thresholdedr, frameBot;
+	//Only consider the bottom half of the image.
+	frameBot = color_image_->cv::Mat::rowRange(cv::Range((int)((color_image_->rows)/2), color_image_->rows));
+	//Convert the image to HSV.
+	cv::cvtColor(frameBot, hsv, CV_BGR2HSV);
+	//Threshold the image to help track the balls.
+	cv::inRange(hsv, cv::Scalar(thresh_vals[0], thresh_vals[1], thresh_vals[2]), 
+			cv::Scalar(thresh_vals[3], thresh_vals[4], thresh_vals[5]), thresholdedb);
+	cv::inRange(hsv, cv::Scalar(thresh_vals[6], thresh_vals[7], thresh_vals[8]), 
+			cv::Scalar(thresh_vals[9], thresh_vals[10], thresh_vals[11]), thresholdedr);
+	cv::bitwise_or(thresholdedb,thresholdedr,thresholded);
+	//Blur the image to improve detection results.
 	GaussianBlur(thresholded, blur, cv::Size(9, 9), 3, 3);
 
 	// Get detections
@@ -180,6 +199,7 @@ bool BlobNode::detectBlobs()
 
 			cv::Rect r(topLeft.x, topLeft.y, width, height);
 			found_.push_back(r);
+			responses_.push_back(kp.response);
 		}
 	}
 

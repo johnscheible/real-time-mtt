@@ -74,7 +74,7 @@
     double pos_threshold_;
 
     // Detector threshold
-    int min_thresh_;
+	vector<int> thresh_vals;
 
     int version_;
   };
