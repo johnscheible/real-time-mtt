@@ -188,13 +188,20 @@ bool BlobNode::detectBlobs()
 
 std::vector<cv::Rect> BlobNode::getDetections()
 {
+	std::cerr << "------------------\n";
+	for (vector<cv::Rect>::iterator it = found_.begin(), e = found_.end();
+		   it != e; ++it) {
+		
+		std::cerr << "x: " << it->x << " | y:" << it->y
+							<< " | width: " << it->width << " | height: " << it ->height << std::endl;
+	}
 	return found_;
 }
 
 //TODO
 double BlobNode::getConfidence(const cv::Rect &rt, double depth)
 {
-	return 0.0;
+	return 1.0;
 	// double overlap = 0.0; // detectionOberlap(rt);
 	// int idx = 0;
 

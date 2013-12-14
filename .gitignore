@@ -1,0 +1,9 @@
+*.png
+*.conf
+*/CMakeCache.txt
+*/CMakeFiles/*
+*/Makefile
+*/bin/*
+*/cmake_install.cmake
+*/lib/*
+*/results/*
