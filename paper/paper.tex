@@ -1,0 +1,135 @@
+% Change to use the correct class file for your paper.
+\documentclass{sig-alternate-10pt}
+
+%\pagenumbering{arabic}
+
+\usepackage{amsfonts}     % Adds math fonts, commands such as \begin{align}
+\usepackage{array}        % Tables for use in math mode
+\usepackage{booktabs}     % Elegant table-formatting library
+\usepackage{bold-extra}   % Provides bf+sc (only in textbf+textsc env.)
+\usepackage{bytefield}    % Formatting and layout of packets / bytefields
+\usepackage[skip=5pt]{caption}
+\usepackage{color}        % Allow the use and definition of colors
+\usepackage{colortbl}     % Color table cells
+\usepackage{comment}      % Provides \begin,\end{comment} for large blocks
+\usepackage{cprotect}     % Allows verbatim, other formatting in macro args
+\usepackage{endnotes}     % Footnotes pushed to the end of a document
+\usepackage{gensymb}      % Adds useful symbols w/out math mode, e.g. \degree
+\usepackage{graphicx}     % For importing graphics
+\usepackage{epsfig}
+\usepackage{hyperref}     % Creates hyperlinks from ref/cite 
+\hypersetup{pdfstartview=FitH}
+\usepackage{listings}     % in-line source code (poorly, consider minted)
+\usepackage{mathtools}    % amsmath extension, adds more math formatting
+\usepackage{multirow}     % Multiple row spacing in tables
+\usepackage{nth}          % Typeset 33rd correctly as \nth{33}
+%\usepackage[section]{placeins} % Don't let figs escape their sections
+\usepackage{rotating}     % Rotates any object, note sideways != sidewaysfigure
+%\usepackage[all=normal]{savetrees} % For when space is tight, read manual and
+                          % selectively enable things. CAN BREAK CONF STYLES!!
+\usepackage{soul}         % Provides \hl{} for highlighting
+%\usepackage{subfig}
+%\usepackage{subfigure}    % Complicated figure creation
+\usepackage{subcaption}   % Replaces both subfig and subfigure
+\usepackage[nofancy]{svninfo} % svn information in docs (req. svn:keywords)
+\usepackage{tabularx}     % Complicated table creation
+\usepackage{threeparttable} % Add footnotes to a table
+\usepackage{units}        % For nice fractions, \nicefrac{1}{2} --> 1/2
+\usepackage{url}          % Pretty printing of hyperlinks
+\usepackage{xspace}       % Intelligently add spaces after commands
+
+%\DeclareCaptionType{copyrightbox}
+
+\newlength\SUBSIZE
+
+\renewcommand{\arraystretch}{1.2} % Space out rows in tables
+
+%\setlength\paperheight {11in}
+%\setlength\paperwidth {8.5in}
+
+% Set the graphics path
+\graphicspath{{../figs/}{../images/build/}}
+
+% No space between bibliography items:
+\let\oldthebibliography=\thebibliography
+  \let\endoldthebibliography=\endthebibliography
+  \renewenvironment{thebibliography}[1]{%
+    \begin{oldthebibliography}{#1}%
+      \setlength{\parskip}{0ex}%
+      \setlength{\itemsep}{0ex}%
+  }%
+  {%
+    \end{oldthebibliography}%
+  }
+\setlength{\parindent}{5mm}
+
+\begin{document}
+
+\title{TODO: TITLE}
+
+% AUTHOR STYLE 1
+\author{
+ \alignauthor{Christopher Lesch and John Scheible }\\
+ \affaddr{Electrical Engineering and Computer Science Department}\\
+ \affaddr{University of Michigan}\\
+ \affaddr{Ann Arbor, MI 48109}\\
+ \email{\{chrlesc,jrscheib\}@umich.edu}
+}
+
+% AUTHOR STYLE 2
+\begin{comment}
+\author{
+\begin{tabular}{cc}
+  \multicolumn{2}{c}{Author 1$^\dagger$, Author 2$^\dagger$, Author 3$^\dagger$, Author 4$^\ddagger$, and Author 5$^\dagger$\vspace{0.3cm}} \\
+  \affaddr{$^\dagger$Computer Science \& Engineering Division} & \affaddr{$^\ddagger$Electrical and Computer Engineering Dept} \\ 
+  \affaddr{University of Michigan} & \affaddr{Diff School}\\
+  \affaddr{Ann Arbor, MI 48109} & \affaddr{Diff Address}\\
+  \affaddr{\{u1,u2,u3,u4\}@eecs.umich.edu} & \affaddr{diffemail@email.com} \\
+\end{tabular}
+}
+\end{comment}
+
+\conferenceinfo{EECS 582 -- Winter'13} {Jan 10--Apr 23, 2013, Ann Arbor, Michigan, USA.}
+\CopyrightYear{2013}
+\crdata{XXX-X-XXXXX-XXX-X}
+
+\maketitle
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+
+\category{}{COM\-PU\-TER-COM\-MU\-NI\-CA\-TION NET-\\WORKS}{Mobile Communications}
+\terms{Algorithms, Management, Design, Experimentation, Measurement, Performance}
+\keywords{Mobile phones, WiFi, 3G, LTE, Connectivity, Uptime, Always-connected, Always-on} 
+
+\newpage
+
+% page limit          % 14.0 pg
+% abstract            %  0.5 pg
+\vfill\eject
+\input{intro}         % 1.5 pg
+\input{related}       % 2.0 pg
+%\clearpage
+\input{design}         % 3.0 pg
+\input{impl}
+\input{eval}          % 4.0 pg
+\input{disc}          % 0.5 pg
+\input{conc}          % 0.25 pg
+\input{ack}           % 0.25 pg
+
+%Uncomment this line if your paper has / uses end notes
+%\theendnotes
+
+{%\footnotesize
+\raggedright
+\bibliographystyle{abbrv}
+\bibliography{bib}
+}
+
+
+
+
+\end{document}
+

@@ -833,10 +833,12 @@ int main (int ac, char** av)
 	std::vector<std::string> vp_files;
 
 	im_files = read_file_list(params.im_list_file);
-	conf_files = read_file_list(params.conf_list_file);
-	if(im_files.size() == 0 || conf_files.size() == 0) {
-		std::cout << "no valid imfile/conffile" << std::endl;
+	if(im_files.size() == 0) {
+		std::cout << "no valid imfile" << std::endl;
 		return -1;
+	}
+	if(params.conf_list_file != "") {
+		conf_files = read_file_list(params.conf_list_file);
 	}
 	if(params.vp_list_file != "") {
 		vp_files = read_file_list(params.vp_list_file);
@@ -970,7 +972,11 @@ int main (int ac, char** av)
 		timesec = (double)i / fps;
 		// process one frame!!!
 		std::string fname = params.root_dir + im_files[i];
-		std::string cname = params.root_dir + conf_files[i];
+		
+		std::string cname = "";
+		if(conf_files.size() > 0) {
+			std::string cname = params.root_dir + conf_files[i];
+		}
 
 		std::string vpname = "";
 		if(vp_files.size() > 0) {
@@ -1103,7 +1109,7 @@ int main (int ac, char** av)
 	}
 	target_manager.saveAll(params.out_dir);
 
-	assert(im_files.size() == conf_files.size());
+	//assert(im_files.size() == conf_files.size());
 
 	delete mgr;
 }
