@@ -185,14 +185,14 @@ bool BlobNode::detectBlobs()
 			cv::Point topLeft = center;
 			double new_x = topLeft.x - radius;
 			double new_y = topLeft.y - radius;
-			topLeft.x = new_x < 0 ? new_x : 0;
-			topLeft.y = new_y < 0 ? new_y : 0;
+			topLeft.x = new_x < 0 ? 0 : new_x;
+			topLeft.y = new_y < 0 ? 0 : new_y;
 
 			cv::Point botRight = center;
 			new_x = botRight.x + radius;
 			new_y = botRight.y + radius;
-			botRight.x = new_x >= color_image_->rows ? new_x : color_image_->rows - 1;
-			botRight.y = new_y >= color_image_->cols ? new_y : color_image_->cols - 1;
+			botRight.x = new_x >= color_image_->rows ? color_image_->rows - 1 : new_x;
+			botRight.y = new_y >= color_image_->cols ? color_image_->cols - 1 : new_y;
 
 			int width = botRight.x - topLeft.x;
 			int height = botRight.y - topLeft.y;
