@@ -681,7 +681,7 @@ cv::Mat draw_detections(ObservationManager *mgr, cv::Mat &image_color, bool bsho
 	std::vector<cv::Rect> dets;
 	int thickline = floor(image.cols / 300);
 
-	mgr->quaryData("detection_readin_detection", &dets);
+	mgr->quaryData("blob_detection", &dets);
 	for(size_t j = 0; j < dets.size(); j++) {
 		cv::rectangle(image, dets[j].tl(), dets[j].br(), cv::Scalar(0, 0, 150), thickline);
 	}
@@ -883,9 +883,9 @@ int main (int ac, char** av)
 	mgr->setParameters("max_height", boost::lexical_cast<std::string>(params.max_height));
 	mgr->setParameters("feat_sigma_u", boost::lexical_cast<std::string>(params.feat_sigma_u));
 	mgr->setParameters("feat_sigma_v", boost::lexical_cast<std::string>(params.feat_sigma_u));
-	mgr->setParameters("detection_readin_weight", boost::lexical_cast<std::string>(params.det_weight));
-	mgr->setParameters("detection_readin_threshold", boost::lexical_cast<std::string>(params.det_threshold));
-	mgr->setParameters("detection_readin_det_scale", boost::lexical_cast<std::string>(params.det_scale));
+	mgr->setParameters("blob_weight", boost::lexical_cast<std::string>(params.det_weight));
+	mgr->setParameters("blob_threshold", boost::lexical_cast<std::string>(params.det_threshold));
+	mgr->setParameters("blob_det_scale", boost::lexical_cast<std::string>(params.det_scale));
 	mgr->setParameters("detection_std_x", boost::lexical_cast<std::string>(params.detection_std_x));
 	mgr->setParameters("detection_std_y", boost::lexical_cast<std::string>(params.detection_std_y));
 	mgr->setParameters("detection_std_h", boost::lexical_cast<std::string>(params.detection_std_h));
@@ -1009,6 +1009,15 @@ int main (int ac, char** av)
 		tracker.setMeanShiftData(target_manager.getMSRects(), target_manager.getMSSims());
 		// generate proposals
 		std::vector<cv::Rect> dets = mgr->getDetections();
+		//$$$$$$$$$$$$$$$$$$$$$$$$$$$
+		std::cerr << "----------detections--------\n";
+		for (std::vector<cv::Rect>::iterator r = dets.begin(), e = dets.end();
+		     r != e; ++r) {
+			std::cerr << "x: " << r->x << "\t| y:" << r->y
+								<< "\t| width: " << r->width << "\t| height: " << r->height << std::endl;
+		}
+		//$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
 		// find matches between new detections and existing targets
 		std::vector<cv::Rect> proposal_rts;
 		target_manager.getProposals(dets, image_color, proposal_rts); // using overlap between bbs
@@ -1041,6 +1050,16 @@ int main (int ac, char** av)
 		for(size_t j = 0; j < tracks.size(); j++) {
 			target_rts.push_back(mean_cam->project(tracks[j]->getMean()));
 		}
+		//$$$$$$$$$$$$$$$$$$$$$$$$$$$
+		std::cerr << "----------targets--------\n";
+		for (std::vector<cv::Rect>::iterator r = target_rts.begin(), e = target_rts.end();
+		     r != e; ++r) {
+			std::cerr << "x: " << r->x << "\t| y:" << r->y
+								<< "\t| width: " << r->width << "\t| height: " << r->height << std::endl;
+		}
+		std::cerr << "Horizon: " << mean_cam->getElement(7) << std::endl;
+		//$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
 		target_manager.updateTargets(tracks, target_rts, image_color);
 		target_manager.updateMeanShiftTrackers(image_color);
 

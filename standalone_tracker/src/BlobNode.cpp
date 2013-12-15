@@ -92,6 +92,7 @@ void BlobNode::setParameter(const std::string &name, const std::string &value)
 		det_scale_ = boost::lexical_cast<double>(value);
 	else if(name == "blob_threshold")
 		hit_threshold_ = boost::lexical_cast<double>(value);
+	// This isn't being used right now...
 	else if(name == "blob_detector_area")
 		default_detector_->set("minArea", boost::lexical_cast<int>(value));
 	else if(name == "detection_std_x")
@@ -168,35 +169,16 @@ bool BlobNode::detectBlobs()
 			cv::Scalar(thresh_vals[3], thresh_vals[4], thresh_vals[5]), thresholdedb);
 	cv::inRange(hsv, cv::Scalar(thresh_vals[6], thresh_vals[7], thresh_vals[8]), 
 			cv::Scalar(thresh_vals[9], thresh_vals[10], thresh_vals[11]), thresholdedr);
-	// int huemin,satmin,valmin,huemin2,satmin2,valmin2 = 0;
-	// int huemax,satmax,valmax,huemax2,satmax2,valmax2 = 256;
-	// huemin = 123;
-	// satmin = 32;
-	// valmin = 218;
-	// huemax = 188;
-	// satmax = 256;
-	// valmax = 256;
-	// huemin2 = 60;
-	// satmin2 = 30;
-	// valmin2 = 134;
-	// huemax2 = 89;
-	// satmax2 = 150;
-	// valmax2 = 256;
-	// inRange(hsv, cv::Scalar(huemin,satmin,valmin), cv::Scalar(huemax,satmax,valmax), thresholdedb);
-	// inRange(hsv, cv::Scalar(huemin2,satmin2,valmin2), cv::Scalar(huemax2,satmax2,valmax2), thresholdedr);
 
 	cv::bitwise_or(thresholdedb,thresholdedr,thresholded);
-	cv::imshow("thresh",thresholded);
 	//Blur the image to improve detection results.
 	GaussianBlur(thresholded, blur, cv::Size(9, 9), 3, 3);
-	cv::imshow("blur",blur);
 
 	// Get detections
 	std::vector<cv::KeyPoint> keypoints;
 	default_detector_->detect(blur, keypoints);
 
-	std::cerr << "------------------\n";
-
+	// Convert detections to Rects and push them into found
 	for(size_t i = 0; i < keypoints.size(); i++){
 			if(!supress(keypoints,keypoints[i])){		
 				cv::Point center = keypoints[i].pt;
@@ -219,57 +201,31 @@ bool BlobNode::detectBlobs()
 				int height = botRight.y - topLeft.y;
 				//Bounding box of a maximal detection.
 				cv::Rect r(topLeft.x,topLeft.y + frameBot.rows,width,height);
-				cv::rectangle(*color_image_,r,cv::Scalar(256,0,0),1,CV_AA);
-				std::cerr << "x: " << r.x << " | y:" << r.y
-											<< " | width: " << r.width << " | height: " << r.height << std::endl;
+				//cv::rectangle(*color_image_,r,cv::Scalar(256,256,0),1,CV_AA);
 				found_.push_back(r);
 				confidence_[&(found_.back())] = keypoints[i].response;
 			}
 		}
-		cv::imshow("frameBot",frameBot);
-	// Convert detections to Rects and push them into found
-/*	for (std::vector<cv::KeyPoint>::iterator kpi = keypoints.begin(),
-		   kpe = keypoints.end(); kpi != kpe; ++kpi) {
-		cv::KeyPoint kp = *kpi;
-		if (!supress(keypoints, kp)) {
-
-			cv::Point center = kp.pt;
-			int radius = cvRound(kp.size / 2);
-			
-			cv::Point topLeft = center;
-			double new_x = topLeft.x - radius;
-			double new_y = topLeft.y - radius;
-			topLeft.x = new_x < 0 ? 0 : new_x;
-			topLeft.y = new_y < 0 ? 0 : new_y;
-
-			cv::Point botRight = center;
-			new_x = botRight.x + radius;
-			new_y = botRight.y + radius;
-			botRight.x = new_x >= frameBot.rows ? frameBot.rows - 1 : new_x;
-			botRight.y = new_y >= frameBot.cols ? frameBot.cols - 1 : new_y;
-
-			int width = botRight.x - topLeft.x;
-			int height = botRight.y - topLeft.y;
-
-			cv::Rect r(topLeft.x, topLeft.y, width, height);
-			found_.push_back(r);
-			confidence_[&(found_.back())] = kp.response;
-		}
-	}*/
 
 	return true;
 }
 
 std::vector<cv::Rect> BlobNode::getDetections()
 {
+
+	// std::cerr << "------------------\n";
+	// for (std::vector<cv::Rect>::iterator r = found_.begin(), e = found_.end();
+	// 	   r != e; ++r) {
+	// 	std::cerr << "x: " << r->x << " | y:" << r->y
+	// 										<< " | width: " << r->width << " | height: " << r->height << std::endl;
+	// }
 	return found_;
 }
 
 //TODO
 double BlobNode::getConfidence(const cv::Rect &rt, double depth)
 {		
-	return 100;
-	// return confidence_[&rt];
+	return confidence_[&rt];
 	// double overlap = 0.0; // detectionOberlap(rt);
 	// int idx = 0;
 
