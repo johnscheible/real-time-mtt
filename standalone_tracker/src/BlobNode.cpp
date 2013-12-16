@@ -95,6 +95,8 @@ void BlobNode::setParameter(const std::string &name, const std::string &value)
 	// This isn't being used right now...
 	else if(name == "blob_detector_area")
 		default_detector_->set("minArea", boost::lexical_cast<int>(value));
+	else if(name == "blob_horizon")
+		horizon_row_ = boost::lexical_cast<int>(value);
 	else if(name == "detection_std_x")
 		det_std_x_ = boost::lexical_cast<double>(value);
 	else if(name == "detection_std_y")
@@ -200,7 +202,7 @@ bool BlobNode::detectBlobs()
 				int width = botRight.x - topLeft.x;
 				int height = botRight.y - topLeft.y;
 				//Bounding box of a maximal detection.
-				cv::Rect r(topLeft.x,topLeft.y + frameBot.rows,width,height);
+				cv::Rect r(topLeft.x,topLeft.y + horizon_row_,width,height);
 				//cv::rectangle(*color_image_,r,cv::Scalar(256,256,0),1,CV_AA);
 				found_.push_back(r);
 				confidence_[&(found_.back())] = keypoints[i].response;

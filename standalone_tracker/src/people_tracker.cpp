@@ -886,6 +886,7 @@ int main (int ac, char** av)
 	mgr->setParameters("blob_weight", boost::lexical_cast<std::string>(params.det_weight));
 	mgr->setParameters("blob_threshold", boost::lexical_cast<std::string>(params.det_threshold));
 	mgr->setParameters("blob_det_scale", boost::lexical_cast<std::string>(params.det_scale));
+	mgr->setParameters("blob_horizon", boost::lexical_cast<std::string>(params.mean_horizon));
 	mgr->setParameters("detection_std_x", boost::lexical_cast<std::string>(params.detection_std_x));
 	mgr->setParameters("detection_std_y", boost::lexical_cast<std::string>(params.detection_std_y));
 	mgr->setParameters("detection_std_h", boost::lexical_cast<std::string>(params.detection_std_h));
@@ -1102,6 +1103,8 @@ int main (int ac, char** av)
 
 		tracker.filterFeatures(remove_idx);
 		target_manager.updateCamera(mean_cam);
+		int horizon = mean_cam->getElement(7);
+		mgr->setParameters("blob_horizon", boost::lexical_cast<std::string>(horizon));
 
 		cv::Point2f pt = mgr->getVPEstimator()->findVanishingPoint((int)mean_cam->getElement(7), 0.0);
 		target_manager.updateLines(mgr->getVPEstimator()->getAllLines(), mgr->getVPEstimator()->getLinesIntersectingPoint(pt), timesec);
