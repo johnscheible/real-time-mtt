@@ -1,7 +1,10 @@
 \section{Implementation}
 \label{sec:impl}
 
-This section gives an overview of how our changes to the original system were implemented.
+This section gives an overview of how our changes to the original system were implemented. The main change was replacing the
+original observation node, which read the results from the MATLAB preprocessing as described above, with our blob detector
+node. While some minor changes were made to the parameters set and initializing the node, as little code was modified as
+possible to give a consistent comparison to the original system. As such no other optimizations were made.
 
 \subsection{MSER Blob Detection}
 In order to quickly reduce the search space and eliminate a large amount of needless noise from the raw image data a few
@@ -34,5 +37,16 @@ MSER blob detector provided the additional advantage of an easy to implement mea
 detection.
 
 \subsection{Blob Detection Node}
+To use the blob detector in the framework, it had to conform to the \emph{observation node} API the framework defines. This API
+consists of the functions \emph{preprocess}, \emph{getDetections}, and \emph{getConfidence}. The original node would read
+results from a file created by the MATLAB preprocessor, and saves the detections and the confidence of each one.  These results
+are then simply returned when either \emph{getDetections} or \emph{getConfidence} are called. To try and mirror this behavior
+our blob detection node finds detections and saves its confidence in each one when \emph{preprocess} is called.
 
 \subsection{Parameter Tuning}
+The final aspect of our implementation, we found, was a significant amount of tuning. We had previously used the original
+framework with a deformable parts model car tracker that used the same observation node as the pedestrian detector. From this
+experience, we anticipated the significant amount of tuning of the runtime parameters required to adapt the system to, not only
+tracking Spheros instead of pedestrians, but also to the new scene.
+
+First and foremost, the system rejects any detections 
