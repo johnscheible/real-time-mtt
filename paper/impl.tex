@@ -49,4 +49,8 @@ framework with a deformable parts model car tracker that used the same observati
 experience, we anticipated the significant amount of tuning of the runtime parameters required to adapt the system to, not only
 tracking Spheros instead of pedestrians, but also to the new scene.
 
-First and foremost, the system rejects any detections 
+First and foremost, the system rejects any detections that would project to an object outside of a certain size range. Our first
+calibration step was then to adjust this range from that of an upright adult human to that of a robot the size and shape of a
+baseball. Another significant tuning issue was the probability with which a new target exits or enters the scene. The RJ-MCMC
+model uses these two parameters, which must be set by hand, when considering whether to initialize a new target to be tracked
+and when deciding if a target is no longer in frame. While a significant
