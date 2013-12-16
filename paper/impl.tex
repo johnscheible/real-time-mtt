@@ -1,9 +1,37 @@
 \section{Implementation}
 \label{sec:impl}
 
-Summary
+This section gives an overview of how our changes to the original system were implemented.
 
 \subsection{MSER Blob Detection}
+In order to quickly reduce the search space and eliminate a large amount of needless noise from the raw image data a few
+pre-processing steps are applied before the detector. The sequence of applied steps is illustrated in Figure TODO.
+
+The first step we took was to make an estimate of the horizon line within the image. We then discarded all image data above the
+horizon estimate under the assumption that the Spheros would lie on the ground plane, below the horizon line. Next we
+converted the image data from the RGB color-space to HSV, which proved to be a more robust color-space when dealing with
+the self illuminated Spheros. Once in the HSV color-space a threshold estimating the hue and value of the Sphero's was taken to
+produce a binary image. A Gaussian blur was then applied to increase the accuracy of the detector by smoothing the image and
+eliminating noise.
+
+After the aforementioned pre-processing the frames were then passed into a Maximally Stable Extremal Regions (MSER) blob
+detector. Non-maximal suppression was then computed over the resulting feature keypoints, eliminating any keypoints whose
+centers lied within the range of a larger neighboring keypoint. All of the remaining keypoints were considered possible detections
+by our algorithm. Though as can be seen in Figure TODO, not all of these detections corresponded to Spheros; reflections on
+high gloss floors were particularly challenging for the chosen detector. To limit the effect of such spurious results, we computed a
+confidence value for each of our detections. The level of confidence was determined using the range of gray levels that
+elucidated an MSER response along with the frequency of localized responses. The confidence in each detection was not used
+by the detection algorithm, but was later used as a prior probability of the tracking algorithm's Markov Chain.
+
+The application of another detection algorithm, the Hough Circle transform, was also tested. However, we found that the MSER
+blob detector provided a few important advantages. Foremost, the estimate of the Sphero size was found to be closer when
+using the MSER blob detector. Extra importance was placed on this factor as the significance of size accuracy was amplified by
+the applied non-maximal suppression. Detections of the correct size when using the Hough Circle transform were often
+erroneously eliminated by a larger overlapping detection. This issue arises primarily from the Hough Circle transform's reliance
+upon the strength of the Canny edge response, which was found to be inconsistent for the illuminated Spheros. The MSER blob
+detector, on the other hand, is localized to the center of the response, and offered greater consistency between frames. The
+MSER blob detector provided the additional advantage of an easy to implement measure of our confidence in the results of the
+detection.
 
 \subsection{Blob Detection Node}
 

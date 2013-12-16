@@ -7,6 +7,11 @@ Summary
 - Implemented realtime blob detector
 - Dropped it into tracker
 
+To best evaluate the performance of the system and assess whether a real-time solution was possible, our first step was to have
+the entire system run as one process. This meant eliminating the preprocessing step that the original system required. This
+preprocessing was a \emph{deformable parts model} pedestrian detector written in MATLAB. This step, as we show in our
+evaluation, was the largest bottleneck when 
+
 \subsection{MSER Blob Detector}
 
 \subsection{MTT Framework's Observation Nodes}
