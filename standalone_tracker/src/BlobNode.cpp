@@ -161,7 +161,7 @@ bool BlobNode::detectBlobs()
 	// Initialize variables.
 	cv::Mat hsv, blur, thresholded, thresholdedb, thresholdedr, frameBot;
 	//Only consider the bottom half of the image.
-	frameBot = color_image_->cv::Mat::rowRange(cv::Range((int)((color_image_->rows)/2), color_image_->rows));
+	frameBot = color_image_->cv::Mat::rowRange(cv::Range(horizon_row_, color_image_->rows));
 	//Convert the image to HSV.
 	cv::cvtColor(frameBot, hsv, CV_BGR2HSV);
 	//Threshold the image to help track the balls.

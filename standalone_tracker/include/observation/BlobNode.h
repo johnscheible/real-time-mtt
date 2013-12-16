@@ -54,6 +54,7 @@
     bool supress(std::vector<cv::KeyPoint>& keypoints, cv::KeyPoint& query);
     bool detectBlobs();
     cv::Ptr<cv::FeatureDetector> default_detector_;
+	int horizon_row_;
 
   protected:
     cv::Mat *color_image_;
