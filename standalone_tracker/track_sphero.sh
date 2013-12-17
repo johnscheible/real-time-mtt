@@ -21,8 +21,8 @@ IMLIST=$ROOTDIR"$SEQNAME"_imlist.txt
 echo $IMLIST
 CONFLIST=$ROOTDIR"$SEQNAME"_conflist.txt
 echo $CONFLIST
-INIT_CAM="--init_cam_focal 500.0 --init_cam_x 0 --init_cam_y 1.0 --init_cam_z 0.0 --init_cam_v 1.0
-        	--init_cam_yaw 0.0 --init_cam_horizon 350.0 --init_cam_xcenter 540"
+INIT_CAM="--init_cam_focal 30.0 --init_cam_x 0 --init_cam_y 1.0 --init_cam_z 0.0 --init_cam_v 1.0
+        	--init_cam_yaw 0.0 --init_cam_horizon 350.0 --init_cam_xcenter 950"
 PARAMS="--outdir results/$SEQNAME.$POSTFIX
 				--outvid results/$SEQNAME.$POSTFIX
 				--showimg true

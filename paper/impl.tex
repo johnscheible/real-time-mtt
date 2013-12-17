@@ -8,7 +8,7 @@ possible to give a consistent comparison to the original system. As such no othe
 
 \subsection{MSER Blob Detection}
 In order to quickly reduce the search space and eliminate a large amount of needless noise from the raw image data a few
-pre-processing steps are applied before the detector. The sequence of applied steps is illustrated in Figure TODO.
+pre-processing steps are applied before the detector. The sequence of applied steps is illustrated in Figure~\ref{fig:blob-results}.
 
 The first step we took was to make an estimate of the horizon line within the image. We then discarded all image data above the
 horizon estimate under the assumption that the Spheros would lie on the ground plane, below the horizon line. Next we
@@ -20,11 +20,44 @@ eliminating noise.
 After the aforementioned pre-processing the frames were then passed into a Maximally Stable Extremal Regions (MSER) blob
 detector. Non-maximal suppression was then computed over the resulting feature keypoints, eliminating any keypoints whose
 centers lied within the range of a larger neighboring keypoint. All of the remaining keypoints were considered possible detections
-by our algorithm. Though as can be seen in Figure TODO, not all of these detections corresponded to Spheros; reflections on
-high gloss floors were particularly challenging for the chosen detector. To limit the effect of such spurious results, we computed a
-confidence value for each of our detections. The level of confidence was determined using the range of gray levels that
-elucidated an MSER response along with the frequency of localized responses. The confidence in each detection was not used
-by the detection algorithm, but was later used as a prior probability of the tracking algorithm's Markov Chain.
+by our algorithm. Though as can be seen in Figure~\ref{fig:blob-results}, not all of these detections corresponded to Spheros;
+reflections on high gloss floors were particularly challenging for the chosen detector. To limit the effect of such spurious results,
+we computed a confidence value for each of our detections. The level of confidence was determined using the range of gray
+levels that elucidated an MSER response along with the frequency of localized responses. The confidence in each detection was
+not used by the detection algorithm, but was later used as a prior probability of the tracking algorithm's Markov Chain.
+
+\begin{figure}[th!]
+	\centering
+	\begin{subfigure}[b]{0.4\textwidth}
+		\includegraphics[width=\textwidth]{img/normal}
+		\caption{Original Image}
+	\end{subfigure}
+
+	\begin{subfigure}[b]{0.4\textwidth}
+		\includegraphics[width=\textwidth]{img/hsv}
+		\caption{HSV space image}
+	\end{subfigure}
+
+	\begin{subfigure}[b]{0.4\textwidth}
+		\includegraphics[width=\textwidth]{img/blur}
+		\caption{Gaussian Blurred, then Thresholded Image}
+	\end{subfigure}
+
+	\begin{subfigure}[b]{0.4\textwidth}
+		\includegraphics[width=\textwidth]{img/detect}
+		\caption{Detections}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.4\textwidth}
+		\includegraphics[width=\textwidth]{img/detect_zoomed}
+		\caption{Zoomed Detections}
+	\end{subfigure}
+	
+	\caption{Sphero Detection: Everything below the horizon in the original image (a)is converted to HSV color space (b).  Next
+	a threshold tuned for Spheros and Gaussian blur are applied (c).  Finally an MSER blob detector yields the detections
+	outlined by the blue squares (d) (enlarged in (e)).  Shown in red is the confidence in that particular detection.}
+	\label{fig:blob-results}
+\end{figure}
 
 The application of another detection algorithm, the Hough Circle transform, was also tested. However, we found that the MSER
 blob detector provided a few important advantages. Foremost, the estimate of the Sphero size was found to be closer when
@@ -53,4 +86,11 @@ First and foremost, the system rejects any detections that would project to an o
 calibration step was then to adjust this range from that of an upright adult human to that of a robot the size and shape of a
 baseball. Another significant tuning issue was the probability with which a new target exits or enters the scene. The RJ-MCMC
 model uses these two parameters, which must be set by hand, when considering whether to initialize a new target to be tracked
-and when deciding if a target is no longer in frame. While a significant
+and when deciding if a target is no longer in frame. Inspection seems to indicate that the reliance on these two parameters biases
+the tracker towards a scene where there are more targets. Since our dataset had only 2 target Spheros, a higher probability of
+targets entering often resulted in false positives occurring, but driving down the parameter resulted in Spheros being missed as
+they re-entered the scene. We will comment on the sensitivity to these parameters in the discussion section.
+
+Additional parameter tuning was required for the standard deviation of several of the parameters the model estimates, including
+horizon, camera movement, and target movement. Finally while the system simultaneously estimates camera state and features
+as it tracks, it still needs some initial camera calibration including focal length and world coordinate location.
