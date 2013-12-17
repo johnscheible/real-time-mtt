@@ -1,17 +1,63 @@
 \section{Evaluation}
 \label{sec:eval}
 
-Summary:
-- Explain types of experiments done
-- discuss speed results
-- discuss accuracy
+This section contains a comparative analysis of the original tracking framework and our proposed tracking framework with
+respect to two primary categories: time-performance and tracking accuracy.
 
-\subsection{Time Performance}
-	\subsubsection{Original System}
+Time performance was particularly important to us as we were concerned about the effects increasingly spaced frames, due to a
+not quite real time tracker, might have on the tracking results.  Furthermore, we were interested in the extensibility of the original
+tracking framework to future advances in computer vision, such as improved algorithms with faster runtime.  In order to compare
+time performance, we profiled both the original system and our proposed system using Zoom Profiler \cite{zoom2013} on an Intel
+3.40 GHzCore i7-2600 running Ubuntu 12.04 with 16 GB of RAM and non-GPU enabled version of OpenCV
+
+\subsection{Original System}
+	Our initial assumption was that the major bottleneck of the tracking algorithm was the Deformable Parts Model pedestrian
+	detector implemented in MATLAB.  As  Figure~\ref{fig:originalruntime} shows, profiling proved this assumption correct; the
+	pre-processing step achieved an average frame-rate of only .44 frames per second.  However, we also found that the
+	current tracking framework ran slower than we had initially anticipated; achieving only 1.34 frames per second.  To better
+	understand why the tracking algorithm was running so slowly we investigated which functions were consuming the majority
+	of the time.  We found that our MCMC sampling function was consuming 54.2\% of the runtime, and so further broke this
+	function down as shown in Figure~\ref{fig:runmcmcloopup}.  This revealed that a great deal of time was being spent
+	computing the posterior probability distribution using the Markov Chain.  While we did not make any modifications to MCMC
+	during our testing, this is one area of further research.
 	
-	\subsubsection{``Real-Time" System}
+	\begin{figure}[!ht]
+		\centering
+		\begin{tabularx}{0.45\textwidth}{ | X | c | c |}
+			\hline
+			\textbf{Stage}					&	\textbf{Time}	& 	\textbf{FPS} \\ \hline
+			Pre-Processing (MATLAB)		&	45 min		&	0.44 \\ \hline
+			Tracking Algorithm (Native)		& 	15 min		&	1.34 \\ \hline
+			Total							&	60 min		& 	0.34 \\ \hline
+		\end{tabularx}
+		\caption{Breakdown of original system runtime}
+		\label{fig:originalruntime}
+	\end{figure}
 	
-\subsection{Tracking Accuracy}
-	\subsubsection{Original System}
+	\begin{figure}[!htm]
+		\centering
+		\begin{subfigure}[b]{0.4\textwidth}
+			\includegraphics[width=\textwidth]{img/runmcmcbreakdown}
+		\end{subfigure}
+
+		\begin{tabularx}{0.45\textwidth}{ | c | X |}
+			\hline
+			1	&	\emph{\tiny PriorDistCameraEstimate::computeNewSampleMotionPrior()} \\ \hline
+			2	&	\emph{\tiny ObservationWrapper::computeNewSampleObservationLkhood()} \\ \hline
+			3	&	\emph{\tiny MCMCSample::setNewSample()} \\ \hline
+			4	&	\emph{\tiny PriorDistCameraEstimate::ComputeLogMotionPrior()} \\ \hline
+			5	&	\emph{\tiny RJMCMCProposal::drawNewSample()} \\ \hline
+			6	&	\emph{\tiny ObservationWrapper::computeLogOvservationLkhood()} \\ \hline
+			7	&	\emph{\tiny PoseteriorDist::getMeanCamera()} \\ \hline
+			8	&	\emph{\tiny MeanShiftWrapper::computeNewSamplesMSLkhood()} \\ \hline
+			9	&	\emph{\tiny RJMCMCProposal::dbgCheckCache()} \\ \hline
+		\end{tabularx}
+		\caption{Breakdown of \emph{runMCMCSampling} runtime}
+		\label{fig:runmcmclookup}
+	\end{figure}
 	
-	\subsubsection{``Real-Time" System}
+\subsection{``Real-Time" System}
+	By eliminating the pre-processing, we made a significant speed-up in overall time. Total run-time for a set of 1209 frames of
+	Sphero data was negligibly higher. Considering that the Sphero dataset was shot at 1080p, much higher than the
+	Pedestrian data set, this seems to be acceptable slow-down considering the elimination of all pre-processing. We have
+	successfully demonstrated that pre-processing can be eliminated with minimal impact on the actual tracker's run time.

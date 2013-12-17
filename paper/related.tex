@@ -1,13 +1,25 @@
 \section{Related Work}
 \label{sec:related}
 
+In 1995 Green first described the addition of Reversible jumps to the Markov Chain Monte Carlo method for Bayesian
+computation, allowing the use of varying dimensionality parameter vectors \cite{green1995reversible}. The algorithm has
+applicability to a range of fields, however, we are interested in the application of RJ-MCMC to multiple agent tracking in computer
+vision.
 
-Previous work
-- Overview of original paper
-- Explain how slow it is/why it is
-- Maybe we do a survey of other real-time tracking attempts?
+In 2004 T. Zhao et al. \cite{zhao2004tracking} released a general framework based on the RJ-MCMC algorithm for tracking
+multiple humans in crowded environments. Instead of using traditional image segmentation, which results in a large number of
+parameters, the framework relied on minimally characterized shape models. Yet, the resulting framework could only achieve a
+frame rate of about 3fps.
 
-How ours is better
-- We've determined the slowest part
-- inserted a detector that runs in real time
-- been able to profile the actual tracker in a realistic situation
+In 2010 Choi et al. \cite{choi2010multiple} developed a multiple agent tracking implementation framework also based on the RJ
+MCMC algorithm. The aim of the framework was to create an interchangeable foundation, where elements such as the detection
+and the tracking scheme could easily be swapped out in favor of improved versions as they are developed. Yet, the resulting
+framework required extensive pre-processing and was computationally expensive.
+
+Both \cite{zhao2004tracking}'s and \cite{choi2010multiple}'s frameworks suffer from an inability to function in real-time. However,
+within this paper we are interested in determining the applicability of \cite{choi2010multiple}'s framework to a real-time tracking
+system as we have previously dealt with this framework. Our work was intended to contribute to \cite{choi2010multiple}'s
+framework by determining the extensibility of the foundation they laid. We analyzed and profiled the original framework, and
+determined the slowest step was the detector being used. To bypass this issue we replaced their detector with our own, real time
+detector, designed to detect simpler objects. This allowed us to profile the tracking framework in a realistic situation and gain a
+better understanding of the practicality of the framework.

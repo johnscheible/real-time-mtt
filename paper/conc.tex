@@ -1,6 +1,9 @@
 \section{Conclusions}
 \label{sec:conc}
 
-Restate goal of real-time and summarize our achievements
-
-Touch on future work to determine if RJ-MCMC can be sped up/made more robust
+The primary contribution of this work was to determine the extensibility of the framework developed by \cite{choi2010multiple}
+under real-time constraints. In order to accomplish this we replaced the Deformable Parts Model pedestrian detector with our
+own simpler, real-time Sphero detector. Yet, the resulting framework was still unable to produce tracking results in real-time. Our
+work has shown that while our RJ-MCMC algorithm may be capable of producing incredibly accurate results, to achieve such
+results required extensive hand tuning on a per-situation basis. Such hand refinement made real-time use impractical.
+Ultimately, the tuning requirement makes it difficult to utilize even a well designed RJ-MCMC framework.

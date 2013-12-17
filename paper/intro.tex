@@ -13,12 +13,12 @@ probabilistic methods have been shown to achieve reasonable tracking results, th
 we have shown still fall short of real-time performance. For many applications, that sort of delay is unacceptable 
 
 We have investigated the feasibility of speeding up one such probabilistic framework as described above. This framework,
-developed by Choi et al. (TODO cite), is meant to track multiple pedestrians with a single, ``minimally calibrated" camera. As
-mentioned above, this particular framework required an expensive pre-processing the data set which took several times longer
-than actually running the tracking. We replaced the pre-processing step, which generated pedestrian detections, with a simpler
-blob detector that runs in real-time. By simplifying the largest bottleneck of the system, and integrating our detector as part of the
-standalone tracker, we've allowed a more extensive analysis of the actual tracking framework and demonstrated that as faster
-detectors are developed, they can be integrated in a rather painless way.
+developed by Choi et al. \cite{choi2010multiple}, is meant to track multiple pedestrians with a single, ``minimally calibrated"
+camera. As mentioned above, this particular framework required an expensive pre-processing the data set which took several
+times longer than actually running the tracking. We replaced the pre-processing step, which generated pedestrian detections,
+with a simpler blob detector that runs in real-time. By simplifying the largest bottleneck of the system, and integrating our detector
+as part of the standalone tracker, we've allowed a more extensive analysis of the actual tracking framework and demonstrated
+that as faster detectors are developed, they can be integrated in a rather painless way.
 
 The rest of the paper is structured as follows: Section 2 gives an overview of Choi et al.'s original framework and a discussion of
 other tracking solutions. Section 3 details our approach to changing the system, including our new detector and how it was

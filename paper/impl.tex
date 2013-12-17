@@ -26,7 +26,7 @@ we computed a confidence value for each of our detections. The level of confiden
 levels that elucidated an MSER response along with the frequency of localized responses. The confidence in each detection was
 not used by the detection algorithm, but was later used as a prior probability of the tracking algorithm's Markov Chain.
 
-\begin{figure}[th!]
+\begin{figure}[!ht]
 	\centering
 	\begin{subfigure}[b]{0.4\textwidth}
 		\includegraphics[width=\textwidth]{img/normal}
@@ -53,9 +53,9 @@ not used by the detection algorithm, but was later used as a prior probability o
 		\caption{Zoomed Detections}
 	\end{subfigure}
 	
-	\caption{Sphero Detection: Everything below the horizon in the original image (a)is converted to HSV color space (b).  Next
-	a threshold tuned for Spheros and Gaussian blur are applied (c).  Finally an MSER blob detector yields the detections
-	outlined by the blue squares (d) (enlarged in (e)).  Shown in red is the confidence in that particular detection.}
+	\caption{Sphero Detection: Everything below the horizon in the original image (a) is converted to HSV color space (b). Next,
+	a threshold and Gaussian blur are applied (c).  Finally an MSER blob detector yields the detections outlined by the blue
+	squares (d) (enlarged in (e)).  Shown in red are the confidences of each detection.}
 	\label{fig:blob-results}
 \end{figure}
 

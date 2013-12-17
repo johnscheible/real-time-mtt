@@ -2,7 +2,29 @@
 \label{sec:disc}
 
 \subsection{Further Speed Improvements}
+	While our new modified system does not run in real-time, we've shown that its possible for a simple detector to be
+	integrated with the system at minimal impact to run time, with the sampling step still the largest bottleneck. Running
+	in around 15 minutes, a speedup of 10x is required. Aside from general optimizations of the code, parallelization stands
+	out as promising area to begin exploring. First of all, OpenCV has a GPU-enabled, optimized version which could be used,
+	presumably offering some not insignificant speedup considering the tracker's reliance on OpenCV code. Additionally, and
+	we believe more interesting, is the prospect of parallelizing the MCMC sampling. Unlike detecting potential targets in
+	successive frames, MCMC sampling is not inherently required to be done in serial. Given that MCMC sampling is the
+	current bottleneck, this could prove to be a massive win for performance. 
 
 \subsection{Parameter Tuning}
+	Our hand-on experience with the system has made another issue beyond performance painfully clear. The system can be 
+	extremely susceptible to incorrect initialization and requires careful tuning to get good tracking results. This limits the
+	portability of the system as someone with rather intimate knowledge needs to tune the parameters for every change from
+	a new target type to something as simple as a slightly more crowded dataset from the same scene. While better
+	documentation and possibly a better front end could help alleviate this problem, it does not change the fact that for more
+	widespread use there are still too many variables that require hand-tuning. 
 
 \subsection{RJ-MCMC}
+	After breaking down the various components of the modified tracking system, the RJ-MCMC algorithm was found to
+	be the primary cause of the slowdown. Particularly, the number of iterations of random sampling that were required for
+	the Markov Chain to produce results dominated by a reasonable approximation of the posterior probability density
+	function, the mixing time, was found to be quite large. This was expected given the dimensionality of our observable
+	parameters, and the unbounded number of targets to track. However, these factors resulted in a need for more
+	compute power to achieve real-time operation using the RJ-MCMC. While the speed-ups mentioned above are
+	capable of providing some improvement, in order to achieve a performance gain orders of magnitude better the
+	efficiency of the algorithm at the core of this model would need to be improved.
